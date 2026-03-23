@@ -1,21 +1,54 @@
 # NwcKit
 
-**NwcKit** is a browser-first TypeScript toolkit for Lightning payments via  
-**Nostr Wallet Connect (NIP-47)**.
+⚡ Lightning payments in the browser via Nostr Wallet Connect (NIP-47)
 
-It provides a clean and strongly-typed API to interact with Lightning wallets over Nostr, designed for modern web applications.
+NwcKit is a browser-first TypeScript toolkit that enables web applications to interact with Lightning wallets using Nostr — completely non-custodial.
+
+No QR codes. No wallet switching. No backend required.
+
+> Think: **Stripe for Lightning — but non-custodial and Nostr-native**
+
+---
+
+## ⚡ 30-second example
+
+```ts
+import { NwcKit, parseNwcUri } from "nwckit";
+
+const connection = parseNwcUri("nostr+walletconnect://...");
+
+const client = new NwcKit({ connection });
+
+await client.connect();
+
+await client.payInvoice({
+  invoice: "lnbc..."
+});
+```
+
+That's it.
+
+---
+
+## 🧠 What it does
+
+NwcKit acts as a bridge between your frontend and a user's Lightning wallet, using Nostr relays as the communication layer (NIP-47).
+
+* The user keeps full control of their funds
+* The app gets permission to request payments
+* All communication is encrypted and relay-based
 
 ---
 
 ## ✨ Features
 
-- ⚡ Lightning payments via Nostr Wallet Connect (NIP-47)
-- 🔐 Encrypted request/response flow (NIP-04 compatible)
-- 🌐 Browser-first architecture (no Node-only dependencies)
-- 🧠 Fully typed TypeScript API
-- 🔌 Simple connection model (URI-based)
-- ⏱ Built-in timeout and error handling
-- 🧱 Modular foundation for future extensions
+⚡ Lightning payments via Nostr Wallet Connect (NIP-47)
+🔐 Encrypted request/response flow (NIP-04 compatible)
+🌐 Browser-first architecture (no Node-only dependencies)
+🧠 Fully typed TypeScript API
+🔌 Simple connection model (URI-based)
+⏱ Built-in timeout and error handling
+🧱 Modular foundation for future extensions
 
 ---
 
@@ -23,23 +56,26 @@ It provides a clean and strongly-typed API to interact with Lightning wallets ov
 
 **Alpha (functional, evolving)**
 
-Currently implemented:
+### ✅ Currently implemented
 
-- ✅ NWC URI parsing
-- ✅ Relay connection handling
-- ✅ Encrypted request/response flow
-- ✅ Full NIP-47 method support:
-  - `get_info`
-  - `get_balance`
-  - `make_invoice`
-  - `pay_invoice`
-  - `lookup_invoice`
-  - `list_transactions`
+* NWC URI parsing
+* Relay connection handling
+* Encrypted request/response flow
 
-⚠️ Still in active development:
-- API surface may change
-- Not yet production hardened
-- Limited cross-wallet testing
+Full NIP-47 method support:
+
+* `get_info`
+* `get_balance`
+* `make_invoice`
+* `pay_invoice`
+* `lookup_invoice`
+* `list_transactions`
+
+### ⚠️ Work in progress
+
+* API surface may change
+* Not yet production hardened
+* Limited cross-wallet testing
 
 ---
 
@@ -47,17 +83,27 @@ Currently implemented:
 
 ```bash
 npm install nwckit
+```
 
-🔗 NWC URI format
+---
 
+## 🔗 NWC URI format
+
+```
 nostr+walletconnect://<wallet_pubkey>?relay=<relay_url>&secret=<secret>
+```
 
 Example:
 
-nostr+walletconnect://abcdef1234567890abcdef...?relay=wss%3A%2F%2Frelay.example.com&secret=0123456789abcdef...
+```
+nostr+walletconnect://abcdef123456...?relay=wss%3A%2F%2Frelay.example.com&secret=0123456789abcdef...
+```
 
-🚀 Quick Start (Complete Example)
+---
 
+## 🚀 Quick Start (Complete Example)
+
+```ts
 import { NwcKit, parseNwcUri } from "nwckit";
 
 // 1. Parse connection URI
@@ -105,27 +151,41 @@ const txs = await client.listTransactions({
 
 // 10. Disconnect
 await client.disconnect();
+```
 
-🧠 API Overview
+---
 
-parseNwcUri(uri: string): NwcConnection
+## 🧠 API Overview
+
+### `parseNwcUri(uri: string): NwcConnection`
 
 Parses a Nostr Wallet Connect URI:
 
+```ts
 {
   walletPubkey: string;
   relayUrl: string;
   secret: string;
   lud16?: string;
 }
-new NwcKit(options)
+```
+
+---
+
+### `new NwcKit(options)`
+
+```ts
 {
   connection: NwcConnection;
   timeoutMs?: number;
 }
+```
 
-🔧 Client Methods
+---
 
+## 🔧 Client Methods
+
+```ts
 connect(): Promise<void>
 disconnect(): Promise<void>
 
@@ -137,41 +197,54 @@ payInvoice(params): Promise<PayInvoiceResponse>
 
 lookupInvoice(params): Promise<InvoiceLookupResponse>
 listTransactions(params?): Promise<ListTransactionsResponse>
+```
 
-⚠️ Important Notes
+---
 
-This library is alpha software
-Requires a real NWC-compatible wallet
-Wallet compatibility may vary depending on implementation
-Not recommended for production use yet
+## ⚠️ Security Model
 
-🛣️ Roadmap
+* Users never expose their private keys
+* Apps operate via scoped permissions (NWC)
+* All communication is encrypted over Nostr relays
+* No custody, no fund transfers to third parties
 
-Improve cross-wallet compatibility
-Add NIP-44 encryption support
-Add signer abstraction (browser / extension / ephemeral)
-Improve relay management (multi-relay, fallback)
-Create browser demo app
-Publish stable v1
+---
 
-🧩 Future Vision
+## 🛣️ Roadmap
 
-NwcKit is designed as a modular ecosystem for Lightning + Nostr apps.
+* Improve cross-wallet compatibility
+* Add NIP-44 encryption support
+* Add signer abstraction (browser / extension / ephemeral)
+* Improve relay management (multi-relay, fallback)
+* Create browser demo app
+* Publish stable v1
+
+---
+
+## 🧩 Vision
+
+NwcKit aims to become the **standard browser SDK for Lightning over Nostr**.
 
 Planned future modules:
 
-identity resolution layer (Nostr + Lightning)
-browser UI components
-Lightning UX abstractions
-React integration
+* Identity resolution layer (Nostr + Lightning)
+* Browser UI components
+* Lightning UX abstractions
+* React integration
 
-🛠️ Development
+---
 
+## 🛠️ Development
+
+```bash
 git clone https://github.com/nmassari/NwcKit.git
 cd NwcKit
 npm install
 npm run build
+```
 
-📄 License
+---
+
+## 📄 License
 
 MIT
