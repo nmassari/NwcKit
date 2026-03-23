@@ -47,7 +47,9 @@ Currently implemented:
 
 ```bash
 npm install nwckit
+
 🔗 NWC URI format
+
 nostr+walletconnect://<wallet_pubkey>?relay=<relay_url>&secret=<secret>
 
 Example:
@@ -55,6 +57,7 @@ Example:
 nostr+walletconnect://abcdef1234567890abcdef...?relay=wss%3A%2F%2Frelay.example.com&secret=0123456789abcdef...
 
 🚀 Quick Start (Complete Example)
+
 import { NwcKit, parseNwcUri } from "nwckit";
 
 // 1. Parse connection URI
@@ -120,7 +123,9 @@ new NwcKit(options)
   connection: NwcConnection;
   timeoutMs?: number;
 }
+
 🔧 Client Methods
+
 connect(): Promise<void>
 disconnect(): Promise<void>
 
@@ -134,12 +139,14 @@ lookupInvoice(params): Promise<InvoiceLookupResponse>
 listTransactions(params?): Promise<ListTransactionsResponse>
 
 ⚠️ Important Notes
+
 This library is alpha software
 Requires a real NWC-compatible wallet
 Wallet compatibility may vary depending on implementation
 Not recommended for production use yet
 
 🛣️ Roadmap
+
 Improve cross-wallet compatibility
 Add NIP-44 encryption support
 Add signer abstraction (browser / extension / ephemeral)
@@ -159,7 +166,8 @@ Lightning UX abstractions
 React integration
 
 🛠️ Development
-git clone https://github.com/your-username/NwcKit.git
+
+git clone https://github.com/nmassari/NwcKit.git
 cd NwcKit
 npm install
 npm run build
