@@ -174,13 +174,22 @@ export class NwcKit {
   }
 
   async getBalance(): Promise<NwcBalanceResponse> {
-    return this.request("get_balance", {});
-  }
+    const result = await this.request("get_balance", {});
 
-  async makeInvoice(params: MakeInvoiceParams): Promise<MakeInvoiceResponse> {
-    return this.request("make_invoice", params);
+    return {
+      ...result,
+      balance: msatsToSats(result.balance),
+    };
   }
+    async makeInvoice(params: MakeInvoiceParams): Promise<MakeInvoiceResponse> {
+    const fixedParams: MakeInvoiceParams = {
+      ...params,
+      amount: satsToMsats(params.amount),
+    };
 
+    const result = await this.request("make_invoice", fixedParams);
+    return normalizeInvoiceAmounts(result);
+  }
   async payInvoice(invoice: string): Promise<PayInvoiceResponse>;
   async payInvoice(params: PayInvoiceParams): Promise<PayInvoiceResponse>;
   async payInvoice(
@@ -189,19 +198,33 @@ export class NwcKit {
     const params =
       typeof input === "string" ? { invoice: input } : input;
 
-    return this.request("pay_invoice", params);
+    const result = await this.request("pay_invoice", params);
+
+    return {
+      ...result,
+      fees_paid:
+        result.fees_paid !== undefined
+          ? msatsToSats(result.fees_paid)
+          : result.fees_paid,
+    };
   }
 
   async lookupInvoice(
     params: LookupInvoiceParams
   ): Promise<InvoiceLookupResponse> {
-    return this.request("lookup_invoice", params);
+    const result = await this.request("lookup_invoice", params);
+    return normalizeInvoiceAmounts(result);
   }
 
   async listTransactions(
     params: ListTransactionsParams = {}
   ): Promise<ListTransactionsResponse> {
-    return this.request("list_transactions", params);
+    const result = await this.request("list_transactions", params);
+
+    return {
+      ...result,
+      transactions: (result.transactions ?? []).map(normalizeInvoiceAmounts),
+    };
   }
 
   async request<TMethod extends NwcMethod>(
@@ -431,6 +454,33 @@ export class NwcKit {
 }
 
 // ---- Helpers ----
+function satsToMsats(sats: number): number {
+  if (!Number.isFinite(sats) || sats <= 0) {
+    throw new Error("Amount must be a positive number in sats");
+  }
+
+  return Math.round(sats * 1000);
+}
+
+function msatsToSats(msats: number): number {
+  if (!Number.isFinite(msats)) {
+    throw new Error("Amount must be a finite number in msats");
+  }
+
+  return Math.round(msats / 1000);
+}
+
+function normalizeInvoiceAmounts<T extends {
+  amount?: number;
+  fees_paid?: number;
+}>(obj: T): T {
+  return {
+    ...obj,
+    amount: obj.amount !== undefined ? msatsToSats(obj.amount) : obj.amount,
+    fees_paid:
+      obj.fees_paid !== undefined ? msatsToSats(obj.fees_paid) : obj.fees_paid,
+  };
+}
 
 function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);

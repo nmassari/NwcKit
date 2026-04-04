@@ -1,6 +1,6 @@
 {
   "name": "nwckit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Browser-first TypeScript toolkit for Lightning payments via Nostr Wallet Connect",
   "type": "module",
   "main": "./dist/index.js",

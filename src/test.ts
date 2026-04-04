@@ -3,7 +3,7 @@ import { NwcKit, NwcError } from "./client.js";
 
 async function main() {
   const connection = parseNwcUri(
-    process.env.NWC_URI!
+    "nostr+walletconnect://75b11fb07d7c87cfff8365326e5fc5e0a266e50cd0a3c22fdae8f727849d09fe?relay=wss://relay.getalby.com/v1&secret=493d81ec9ec17d4ac05c8e0ce9a147c2eaf39dce02d63b246019e76141431657"
   );
 
   console.log("Parsed connection:");
@@ -43,7 +43,7 @@ async function main() {
     console.dir(balance, { depth: null });
 
     const invoice = await client.makeInvoice({
-      amount: 1000,
+      amount: 30000,
       description: "NwcKit test"
     });
 
@@ -52,7 +52,7 @@ async function main() {
 
     if (invoice.payment_hash) {
       const lookup = await client.lookupInvoice({
-        payment_hash: invoice.payment_hash,
+        payment_hash: invoice.payment_hash        
       });
 
       console.log("Lookup:");
