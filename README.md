@@ -1,4 +1,6 @@
 # NwcKit
+[![npm](https://img.shields.io/npm/v/nwckit)](https://www.npmjs.com/package/nwckit)
+[![license](https://img.shields.io/npm/l/nwckit)](https://github.com/nmassari/nwckit/blob/main/LICENSE)
 
 ⚡ Lightning payments in the browser via Nostr Wallet Connect (NIP-47)
 
