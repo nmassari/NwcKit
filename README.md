@@ -268,4 +268,4 @@ MIT
 
 ## 👨‍💻 Author
 
-Nicola Massari
+Nicola Massari - easycryptosend.it
