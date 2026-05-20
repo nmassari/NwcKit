@@ -3,17 +3,17 @@
 [![npm](https://img.shields.io/npm/v/nwckit)](https://www.npmjs.com/package/nwckit)
 [![license](https://img.shields.io/npm/l/nwckit)](https://github.com/nmassari/nwckit/blob/main/LICENSE)
 
-⚡ Lightning payments in the browser via Nostr Wallet Connect (NIP-47)
+Browser-first TypeScript toolkit for Nostr Wallet Connect, Lightning payments and NWC-based Bitcoin swap flows.
 
-**NwcKit** is a browser-first TypeScript toolkit that enables web applications to interact with Lightning wallets using Nostr — completely non-custodial.
+**NwcKit** lets web apps connect to a user's NWC wallet, inspect wallet state, create invoices, pay invoices and call supported Lightning/on-chain swap methods over the same encrypted Nostr session.
 
-No QR codes. No wallet switching. No backend required.
+No custody. No wallet switching. No node management in your frontend.
 
-> Think: **Stripe for Lightning — but non-custodial and Nostr-native**
+> Think: a Nostr-native wallet action layer for Bitcoin apps.
 
 ---
 
-## ⚡ 30-second example
+## 30-second example
 
 ```ts
 import { NwcKit, parseNwcUri } from "nwckit";
@@ -24,66 +24,85 @@ const client = new NwcKit({ connection });
 
 await client.connect();
 
-await client.payInvoice({
-  invoice: "lnbc..."
+await client.payInvoice("lnbc...");
+
+const invoice = await client.makeInvoice({
+  amount: 2100,
+  description: "Premium access",
 });
+
+const swap = await client.createLightningToOnchainSwap({
+  amountSats: 2100,
+  destinationAddress: "bc1q...",
+});
+
+await client.disconnect();
 ```
 
-That's it.
+---
+
+## What it does
+
+NwcKit acts as a bridge between a browser app and a user's wallet service using **Nostr Wallet Connect** (NIP-47).
+
+It supports standard wallet actions:
+
+* Connect to an NWC wallet
+* Read wallet info and balance
+* Create Lightning invoices
+* Pay Lightning invoices
+* Look up invoices
+* List transactions
+
+It also supports NWC custom swap extensions, when the connected wallet service advertises them:
+
+* Create on-chain to Lightning swaps
+* Create Lightning to on-chain swaps
+* Read swap status
+* Refresh swap status from the swap provider
+
+The swap flow is exposed through the NWC session, so the browser app keeps using one client for wallet actions and supported swaps.
 
 ---
 
-## 🧠 What it does
+## Architecture
 
-NwcKit acts as a bridge between your frontend and a user's Lightning wallet using **Nostr relays** as the communication layer (NIP-47).
-
-* The user keeps full control of their funds
-* The app gets permission to request payments
-* All communication is encrypted and relay-based
-
----
-
-## 🧩 Architecture
-
-NwcKit is designed to be part of a modular Lightning stack:
-
-* **NwcKit** → Lightning payments (this library)
-* **OcbKit** → on-chain ↔ Lightning swaps
-* **OnchainBridge** → backend swap service
+NwcKit is the browser SDK used by your app. The connected wallet service remains responsible for wallet operations and, when supported, server-side coordination with services such as OnchainBridge and Boltz.
 
 Typical flow:
 
 ```text
-User → NwcKit (wallet connection)
-     → Lightning payment
-     → (optional) OcbKit → on-chain swap
+User wallet
+   ^
+   | encrypted NWC requests over Nostr
+   v
+Web app -> NwcKit -> Nostr relay -> wallet service
+                                  -> optional swap backend -> Boltz
 ```
 
----
-
-## ✨ Features
-
-* ⚡ Lightning payments via Nostr Wallet Connect (NIP-47)
-* 🔐 Encrypted request/response flow (NIP-04 compatible)
-* 🌐 Browser-first (no Node-only dependencies)
-* 🧠 Fully typed TypeScript API
-* 🔌 Simple connection model (URI-based)
-* ⏱ Built-in timeout & error handling
-* 🧱 Modular & extensible
+This keeps the app non-custodial while still giving it a compact API for Lightning and supported swap operations.
 
 ---
 
-## 🚧 Status
+## Features
 
-**Alpha (functional, evolving)**
-
-### ✅ Implemented
-
-* NWC URI parsing
+* Nostr Wallet Connect URI parsing
 * Relay connection handling
 * Encrypted request/response flow
+* Browser-first TypeScript API
+* Standard NWC Lightning methods
+* Custom NWC swap methods
+* Sats-based public amounts with msat normalization internally
+* Built-in timeout and typed error handling
+* Debug logging option
 
-Supported methods:
+---
+
+## Status
+
+**Alpha: functional and evolving.**
+
+Implemented:
 
 * `get_info`
 * `get_balance`
@@ -91,16 +110,21 @@ Supported methods:
 * `pay_invoice`
 * `lookup_invoice`
 * `list_transactions`
+* `create_onchain_to_lightning_swap`
+* `create_lightning_to_onchain_swap`
+* `get_swap_status`
+* `refresh_swap_status`
 
-### ⚠️ Work in progress
+Notes:
 
-* API surface may change
-* Not yet production hardened
-* Limited cross-wallet testing
+* API surface may change before v1
+* Swap methods require a compatible wallet service
+* Cross-wallet compatibility is still being expanded
+* NIP-04 compatible encryption is currently used
 
 ---
 
-## 📦 Installation
+## Installation
 
 ```bash
 npm install nwckit
@@ -108,71 +132,61 @@ npm install nwckit
 
 ---
 
-## 🔗 NWC URI format
+## NWC URI format
 
-```
+```text
 nostr+walletconnect://<wallet_pubkey>?relay=<relay_url>&secret=<secret>
 ```
 
 Example:
 
-```
+```text
 nostr+walletconnect://abcdef123456...?relay=wss%3A%2F%2Frelay.example.com&secret=0123456789abcdef...
 ```
 
 ---
 
-## 🚀 Quick Start (Complete Example)
+## Quick start
 
 ```ts
 import { NwcKit, parseNwcUri } from "nwckit";
 
-// 1. Parse connection URI
 const connection = parseNwcUri(
   "nostr+walletconnect://abcdef1234...?relay=wss%3A%2F%2Frelay.example.com&secret=012345..."
 );
 
-// 2. Create client
 const client = new NwcKit({
   connection,
   timeoutMs: 15000,
+  debug: false,
 });
 
-// 3. Connect
 await client.connect();
 
-// 4. Wallet info
 const info = await client.getInfo();
-
-// 5. Balance
 const balance = await client.getBalance();
 
-// 6. Create invoice
 const invoice = await client.makeInvoice({
   amount: 21000,
   description: "Test payment",
 });
 
-// 7. Pay invoice
 await client.payInvoice({
   invoice: invoice.invoice,
 });
 
-// 8. Lookup
 await client.lookupInvoice({
   payment_hash: invoice.payment_hash,
 });
 
-// 9. Transactions
 await client.listTransactions({ limit: 10 });
 
-// 10. Disconnect
 await client.disconnect();
 ```
 
 ---
 
-## 🧠 API Overview
+## API overview
 
 ### `parseNwcUri(uri: string): NwcConnection`
 
@@ -185,98 +199,145 @@ await client.disconnect();
 }
 ```
 
----
-
 ### `new NwcKit(options)`
 
 ```ts
 {
   connection: NwcConnection;
   timeoutMs?: number;
+  debug?: boolean;
 }
 ```
 
----
-
-## 🔧 Client Methods
+### Connection lifecycle
 
 ```ts
-connect(): Promise<void>
-disconnect(): Promise<void>
-
-getInfo(): Promise<NwcWalletInfo>
-getBalance(): Promise<NwcBalanceResponse>
-
-makeInvoice(params): Promise<MakeInvoiceResponse>
-payInvoice(params): Promise<PayInvoiceResponse>
-
-lookupInvoice(params): Promise<InvoiceLookupResponse>
-listTransactions(params?): Promise<ListTransactionsResponse>
-
-createOnchainToLightningSwap(params): Promise<OnchainToLightningSwapResponse>
-createLightningToOnchainSwap(params): Promise<LightningToOnchainSwapResponse>
-getSwapStatus(params): Promise<SwapOperationStatusResponse>
-refreshSwapStatus(params): Promise<RefreshSwapStatusResponse>
+await client.connect();
+await client.disconnect();
+client.destroy();
 ```
 
-Swap methods are NWC custom extensions. They require a wallet service that advertises:
+### Wallet methods
+
+```ts
+await client.getInfo();
+await client.getBalance();
+
+await client.makeInvoice({
+  amount: 2100,
+  description: "Premium access",
+});
+
+await client.payInvoice("lnbc...");
+
+await client.lookupInvoice({
+  payment_hash: "...",
+});
+
+await client.listTransactions({
+  limit: 10,
+  type: "incoming",
+});
+```
+
+### Swap methods
+
+Swap methods are custom NWC extensions. They work only when the connected wallet service supports and advertises them in `get_info`.
+
+```ts
+const onchainToLightning = await client.createOnchainToLightningSwap({
+  amountSats: 50000,
+  invoice: "lnbc...",
+});
+
+const lightningToOnchain = await client.createLightningToOnchainSwap({
+  amountSats: 50000,
+  destinationAddress: "bc1q...",
+});
+
+const status = await client.getSwapStatus({
+  swapId: lightningToOnchain.swapId,
+});
+
+const refreshed = await client.refreshSwapStatus({
+  swapId: lightningToOnchain.swapId,
+});
+```
+
+Underlying NWC method names:
 
 ```text
-create_onchain_to_lightning_swap create_lightning_to_onchain_swap get_swap_status refresh_swap_status
+create_onchain_to_lightning_swap
+create_lightning_to_onchain_swap
+get_swap_status
+refresh_swap_status
 ```
 
 ---
 
-## ⚠️ Security Model
+## Amount units
 
-* Users never expose private keys
-* Apps operate via scoped permissions (NWC)
-* All communication is encrypted via Nostr
-* No custody, no third-party fund control
+NwcKit exposes public amounts in sats where possible:
+
+* `makeInvoice({ amount })` accepts sats and sends msats over NWC
+* `getBalance()` returns sats
+* invoice and transaction amounts are normalized to sats
+* swap methods use explicit `amountSats`
+
+This keeps app code ergonomic while matching NWC wallet expectations internally.
 
 ---
 
-## 🛣️ Roadmap
+## Security model
+
+* Users never expose wallet private keys to the app
+* Apps operate through NWC permissions
+* Requests and responses are encrypted over Nostr
+* NwcKit does not custody funds
+* Swap execution depends on the connected wallet service and its backend policy
+
+---
+
+## Roadmap
 
 * Improve cross-wallet compatibility
-* Add NIP-44 encryption
-* Signer abstraction (browser / extension / ephemeral)
-* Multi-relay support & fallback
-* UI components (React / Web)
-* Stable v1 release
+* Add NIP-44 encryption support
+* Add multi-relay support and fallback
+* Harden swap-status recovery flows
+* Add optional UI helpers for common wallet flows
+* Stabilize v1 API
 
 ---
 
-## 🧩 Vision
+## Vision
 
-NwcKit aims to become the **standard browser SDK for Lightning over Nostr**.
-
-Future direction:
+NwcKit aims to become a compact browser SDK for Bitcoin apps that need more than a checkout button:
 
 * Lightning-native web payments
-* Identity layer (Nostr + Lightning)
-* Plug-and-play checkout experiences
-* Seamless wallet connectivity for any web app
+* Nostr Wallet Connect app authorization
+* Wallet-powered billing and paywalls
+* Lightning/on-chain bridge flows via supported wallet services
+* Plug-and-play Bitcoin money movement for web products
 
 ---
 
-## 🛠️ Development
+## Development
 
 ```bash
 git clone https://github.com/nmassari/NwcKit.git
-cd NwcKit
+cd NwcKit/NwcKit
 npm install
 npm run build
 ```
 
 ---
 
-## 📄 License
+## License
 
 MIT
 
 ---
 
-## 👨‍💻 Author
+## Author
 
 Nicola Massari - easycryptosend.it

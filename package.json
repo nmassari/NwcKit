@@ -1,7 +1,7 @@
 {
   "name": "nwckit",
   "version": "0.1.2",
-  "description": "Browser-first TypeScript toolkit for Lightning payments via Nostr Wallet Connect",
+  "description": "Browser-first TypeScript toolkit for Nostr Wallet Connect, Lightning payments and NWC-based Bitcoin swap flows",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,7 +14,9 @@
     "lightning",
     "nwc",
     "bitcoin",
-    "nip47"
+    "nip47",
+    "boltz",
+    "swap"
   ],
   "license": "MIT",
   "repository": {
