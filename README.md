@@ -212,6 +212,17 @@ payInvoice(params): Promise<PayInvoiceResponse>
 
 lookupInvoice(params): Promise<InvoiceLookupResponse>
 listTransactions(params?): Promise<ListTransactionsResponse>
+
+createOnchainToLightningSwap(params): Promise<OnchainToLightningSwapResponse>
+createLightningToOnchainSwap(params): Promise<LightningToOnchainSwapResponse>
+getSwapStatus(params): Promise<SwapOperationStatusResponse>
+refreshSwapStatus(params): Promise<RefreshSwapStatusResponse>
+```
+
+Swap methods are NWC custom extensions. They require a wallet service that advertises:
+
+```text
+create_onchain_to_lightning_swap create_lightning_to_onchain_swap get_swap_status refresh_swap_status
 ```
 
 ---

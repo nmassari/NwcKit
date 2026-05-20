@@ -17,12 +17,19 @@ import type {
   PayInvoiceParams,
   LookupInvoiceParams,
   ListTransactionsParams,
+  CreateOnchainToLightningSwapParams,
+  CreateLightningToOnchainSwapParams,
+  SwapStatusParams,
   NwcResponse,
   NwcBalanceResponse,
   MakeInvoiceResponse,
   PayInvoiceResponse,
   InvoiceLookupResponse,
   ListTransactionsResponse,
+  OnchainToLightningSwapResponse,
+  LightningToOnchainSwapResponse,
+  SwapOperationStatusResponse,
+  RefreshSwapStatusResponse,
 } from "./types.js";
 
 // ---- NWC protocol kinds ----
@@ -54,6 +61,32 @@ type NwcMethodMap = {
   list_transactions: {
     params: ListTransactionsParams;
     result: ListTransactionsResponse;
+  };
+  create_onchain_to_lightning_swap: {
+    params: {
+      amount_sats: number;
+      invoice: string;
+    };
+    result: OnchainToLightningSwapResponse;
+  };
+  create_lightning_to_onchain_swap: {
+    params: {
+      amount_sats: number;
+      destination_address: string;
+    };
+    result: LightningToOnchainSwapResponse;
+  };
+  get_swap_status: {
+    params: {
+      swap_id: string;
+    };
+    result: SwapOperationStatusResponse;
+  };
+  refresh_swap_status: {
+    params: {
+      swap_id: string;
+    };
+    result: RefreshSwapStatusResponse;
   };
 };
 
@@ -151,26 +184,29 @@ export class NwcKit {
   async getInfo(): Promise<NwcWalletInfo> {
     this.assertConnected();
 
-    const event = await withTimeout(
-      this.pool.get([this.connection.relayUrl], {
-        kinds: [NWC_INFO_KIND],
-        authors: [this.connection.walletPubkey],
-        limit: 1,
-      }),
-      this.timeoutMs,
-      "get_info"
-    );
-
-    if (!event) {
-      throw new NwcError(
-        "NO_INFO_EVENT",
-        "Wallet info event not found on relay"
+    try {
+      const event = await withTimeout(
+        this.pool.get([this.connection.relayUrl], {
+          kinds: [NWC_INFO_KIND],
+          authors: [this.connection.walletPubkey],
+          limit: 1,
+        }),
+        this.timeoutMs,
+        "get_info"
       );
+
+      if (event) {
+        this.log("NWC info event:", event);
+
+        return parseWalletInfoEvent(event.content, normalizeTags(event.tags));
+      }
+
+      this.log("NWC info event not found; falling back to encrypted get_info request.");
+    } catch (error) {
+      this.log("NWC info event lookup failed; falling back to encrypted get_info request.", error);
     }
 
-    this.log("NWC info event:", event);
-
-    return parseWalletInfoEvent(event.content, normalizeTags(event.tags));
+    return this.request("get_info", {});
   }
 
   async getBalance(): Promise<NwcBalanceResponse> {
@@ -225,6 +261,54 @@ export class NwcKit {
       ...result,
       transactions: (result.transactions ?? []).map(normalizeInvoiceAmounts),
     };
+  }
+
+  async createOnchainToLightningSwap(
+    params: CreateOnchainToLightningSwapParams
+  ): Promise<OnchainToLightningSwapResponse> {
+    assertPositiveSats(params.amountSats);
+    if (!params.invoice?.trim()) {
+      throw new Error("Invoice is required");
+    }
+
+    return this.request("create_onchain_to_lightning_swap", {
+      amount_sats: Math.round(params.amountSats),
+      invoice: params.invoice.trim(),
+    });
+  }
+
+  async createLightningToOnchainSwap(
+    params: CreateLightningToOnchainSwapParams
+  ): Promise<LightningToOnchainSwapResponse> {
+    assertPositiveSats(params.amountSats);
+    if (!params.destinationAddress?.trim()) {
+      throw new Error("Destination address is required");
+    }
+
+    return this.request("create_lightning_to_onchain_swap", {
+      amount_sats: Math.round(params.amountSats),
+      destination_address: params.destinationAddress.trim(),
+    });
+  }
+
+  async getSwapStatus(
+    params: SwapStatusParams
+  ): Promise<SwapOperationStatusResponse> {
+    const swapId = normalizeSwapId(params.swapId);
+
+    return this.request("get_swap_status", {
+      swap_id: swapId,
+    });
+  }
+
+  async refreshSwapStatus(
+    params: SwapStatusParams
+  ): Promise<RefreshSwapStatusResponse> {
+    const swapId = normalizeSwapId(params.swapId);
+
+    return this.request("refresh_swap_status", {
+      swap_id: swapId,
+    });
   }
 
   async request<TMethod extends NwcMethod>(
@@ -455,11 +539,24 @@ export class NwcKit {
 
 // ---- Helpers ----
 function satsToMsats(sats: number): number {
+  assertPositiveSats(sats);
+
+  return Math.round(sats * 1000);
+}
+
+function assertPositiveSats(sats: number): void {
   if (!Number.isFinite(sats) || sats <= 0) {
     throw new Error("Amount must be a positive number in sats");
   }
+}
 
-  return Math.round(sats * 1000);
+function normalizeSwapId(swapId: string): string {
+  const value = swapId?.trim();
+  if (!value) {
+    throw new Error("Swap id is required");
+  }
+
+  return value;
 }
 
 function msatsToSats(msats: number): number {

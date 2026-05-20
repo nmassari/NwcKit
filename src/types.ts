@@ -82,6 +82,69 @@ export interface ListTransactionsResponse {
   transactions: InvoiceLookupResponse[];
 }
 
+export interface CreateOnchainToLightningSwapParams {
+  amountSats: number;
+  invoice: string;
+}
+
+export interface CreateLightningToOnchainSwapParams {
+  amountSats: number;
+  destinationAddress: string;
+}
+
+export interface SwapStatusParams {
+  swapId: string;
+}
+
+export interface OnchainToLightningSwapResponse {
+  ok?: boolean;
+  operationId?: string;
+  swapId: string;
+  direction?: string;
+  status?: string;
+  depositAddress: string;
+  bip21?: string;
+  expectedAmount?: number;
+  timeoutBlockHeight?: number;
+}
+
+export interface LightningToOnchainSwapResponse {
+  ok?: boolean;
+  operationId?: string;
+  swapId: string;
+  direction?: string;
+  status?: string;
+  invoice: string;
+  lockupAddress?: string;
+  timeoutBlockHeight?: number;
+}
+
+export interface SwapOperationStatusResponse {
+  operationId?: string;
+  swapId: string;
+  type?: string;
+  direction?: string;
+  status?: string;
+  boltzStatus?: string;
+  amountSats?: number;
+  expectedAmount?: number;
+  depositAddress?: string;
+  lockupAddress?: string;
+  timeoutBlockHeight?: number;
+  createdUtc?: string;
+  updatedUtc?: string;
+  lastCheckedUtc?: string;
+  completedUtc?: string;
+}
+
+export interface RefreshSwapStatusResponse {
+  ok?: boolean;
+  swapId: string;
+  status?: string;
+  boltzStatus?: string;
+  updatedUtc?: string;
+}
+
 export interface NwcResponse<T = unknown> {
   result_type?: string;
   result?: T;
@@ -115,6 +178,32 @@ export interface NwcMethodMap {
   list_transactions: {
     params: ListTransactionsParams;
     result: ListTransactionsResponse;
+  };
+  create_onchain_to_lightning_swap: {
+    params: {
+      amount_sats: number;
+      invoice: string;
+    };
+    result: OnchainToLightningSwapResponse;
+  };
+  create_lightning_to_onchain_swap: {
+    params: {
+      amount_sats: number;
+      destination_address: string;
+    };
+    result: LightningToOnchainSwapResponse;
+  };
+  get_swap_status: {
+    params: {
+      swap_id: string;
+    };
+    result: SwapOperationStatusResponse;
+  };
+  refresh_swap_status: {
+    params: {
+      swap_id: string;
+    };
+    result: RefreshSwapStatusResponse;
   };
 }
 
