@@ -17,6 +17,10 @@ import type {
   PayInvoiceParams,
   LookupInvoiceParams,
   ListTransactionsParams,
+  CreateSwapParams,
+  CreateSwapRequestParams,
+  CreateSwapResponse,
+  SwapAsset,
   CreateOnchainToLightningSwapParams,
   CreateLightningToOnchainSwapParams,
   SwapStatusParams,
@@ -62,27 +66,17 @@ type NwcMethodMap = {
     params: ListTransactionsParams;
     result: ListTransactionsResponse;
   };
-  create_onchain_to_lightning_swap: {
-    params: {
-      amount_sats: number;
-      invoice: string;
-    };
-    result: OnchainToLightningSwapResponse;
+  create_swap: {
+    params: CreateSwapRequestParams;
+    result: CreateSwapResponse;
   };
-  create_lightning_to_onchain_swap: {
-    params: {
-      amount_sats: number;
-      destination_address: string;
-    };
-    result: LightningToOnchainSwapResponse;
-  };
-  get_swap_status: {
+  get_swap: {
     params: {
       swap_id: string;
     };
     result: SwapOperationStatusResponse;
   };
-  refresh_swap_status: {
+  refresh_swap: {
     params: {
       swap_id: string;
     };
@@ -271,10 +265,13 @@ export class NwcKit {
       throw new Error("Invoice is required");
     }
 
-    return this.request("create_onchain_to_lightning_swap", {
-      amount_sats: Math.round(params.amountSats),
-      invoice: params.invoice.trim(),
-    });
+    return this.createSwap({
+      direction: "onchain_to_lightning",
+      sendAsset: bitcoinOnchainAsset(),
+      receiveAsset: bitcoinLightningAsset(),
+      amount: satsAmount(params.amountSats),
+      receiveInvoice: params.invoice.trim(),
+    }) as Promise<OnchainToLightningSwapResponse>;
   }
 
   async createLightningToOnchainSwap(
@@ -285,9 +282,41 @@ export class NwcKit {
       throw new Error("Destination address is required");
     }
 
-    return this.request("create_lightning_to_onchain_swap", {
-      amount_sats: Math.round(params.amountSats),
-      destination_address: params.destinationAddress.trim(),
+    return this.createSwap({
+      direction: "lightning_to_onchain",
+      sendAsset: bitcoinLightningAsset(),
+      receiveAsset: bitcoinOnchainAsset(),
+      amount: satsAmount(params.amountSats),
+      receiveAddress: params.destinationAddress.trim(),
+    }) as Promise<LightningToOnchainSwapResponse>;
+  }
+
+  async createSwap(params: CreateSwapParams): Promise<CreateSwapResponse> {
+    const amountSats = Number(params.amount?.value);
+    assertPositiveSats(amountSats);
+
+    if (params.amount.unit !== "sat") {
+      throw new Error("Only sat amounts are supported");
+    }
+
+    if (params.direction === "onchain_to_lightning" && !params.receiveInvoice?.trim()) {
+      throw new Error("Receive invoice is required");
+    }
+
+    if (params.direction === "lightning_to_onchain" && !params.receiveAddress?.trim()) {
+      throw new Error("Receive address is required");
+    }
+
+    return this.request("create_swap", {
+      direction: params.direction,
+      send_asset: params.sendAsset,
+      receive_asset: params.receiveAsset,
+      amount: {
+        value: String(Math.round(amountSats)),
+        unit: "sat",
+      },
+      receive_invoice: params.receiveInvoice?.trim(),
+      receive_address: params.receiveAddress?.trim(),
     });
   }
 
@@ -296,7 +325,7 @@ export class NwcKit {
   ): Promise<SwapOperationStatusResponse> {
     const swapId = normalizeSwapId(params.swapId);
 
-    return this.request("get_swap_status", {
+    return this.request("get_swap", {
       swap_id: swapId,
     });
   }
@@ -306,7 +335,7 @@ export class NwcKit {
   ): Promise<RefreshSwapStatusResponse> {
     const swapId = normalizeSwapId(params.swapId);
 
-    return this.request("refresh_swap_status", {
+    return this.request("refresh_swap", {
       swap_id: swapId,
     });
   }
@@ -538,6 +567,33 @@ export class NwcKit {
 }
 
 // ---- Helpers ----
+function bitcoinOnchainAsset(): SwapAsset {
+  return {
+    asset: "BTC",
+    chain: "bitcoin",
+    network: "mainnet",
+    rail: "onchain",
+  };
+}
+
+function bitcoinLightningAsset(): SwapAsset {
+  return {
+    asset: "BTC",
+    chain: "bitcoin",
+    network: "mainnet",
+    rail: "lightning",
+  };
+}
+
+function satsAmount(sats: number): { value: string; unit: "sat" } {
+  assertPositiveSats(sats);
+
+  return {
+    value: String(Math.round(sats)),
+    unit: "sat",
+  };
+}
+
 function satsToMsats(sats: number): number {
   assertPositiveSats(sats);
 

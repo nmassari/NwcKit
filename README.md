@@ -31,9 +31,12 @@ const invoice = await client.makeInvoice({
   description: "Premium access",
 });
 
-const swap = await client.createLightningToOnchainSwap({
-  amountSats: 2100,
-  destinationAddress: "bc1q...",
+const swap = await client.createSwap({
+  direction: "lightning_to_onchain",
+  sendAsset: { asset: "BTC", chain: "bitcoin", network: "mainnet", rail: "lightning" },
+  receiveAsset: { asset: "BTC", chain: "bitcoin", network: "mainnet", rail: "onchain" },
+  amount: { value: "2100", unit: "sat" },
+  receiveAddress: "bc1q...",
 });
 
 await client.disconnect();
@@ -54,7 +57,7 @@ It supports standard wallet actions:
 * Look up invoices
 * List transactions
 
-It also supports NWC custom swap extensions, when the connected wallet service advertises them:
+It also supports experimental NWC swap extensions, when the connected wallet service advertises them:
 
 * Create on-chain to Lightning swaps
 * Create Lightning to on-chain swaps
@@ -91,7 +94,7 @@ This keeps the app non-custodial while still giving it a compact API for Lightni
 * Encrypted request/response flow
 * Browser-first TypeScript API
 * Standard NWC Lightning methods
-* Custom NWC swap methods
+* Experimental NWC swap methods with explicit asset metadata
 * Sats-based public amounts with msat normalization internally
 * Built-in timeout and typed error handling
 * Debug logging option
@@ -110,10 +113,9 @@ Implemented:
 * `pay_invoice`
 * `lookup_invoice`
 * `list_transactions`
-* `create_onchain_to_lightning_swap`
-* `create_lightning_to_onchain_swap`
-* `get_swap_status`
-* `refresh_swap_status`
+* `create_swap`
+* `get_swap`
+* `refresh_swap`
 
 Notes:
 
@@ -242,17 +244,23 @@ await client.listTransactions({
 
 ### Swap methods
 
-Swap methods are custom NWC extensions. They work only when the connected wallet service supports and advertises them in `get_info`.
+Swap methods are experimental NWC extensions intended to be NIP-ready. They work only when the connected wallet service supports and advertises them in `get_info`.
 
 ```ts
-const onchainToLightning = await client.createOnchainToLightningSwap({
-  amountSats: 50000,
-  invoice: "lnbc...",
+const onchainToLightning = await client.createSwap({
+  direction: "onchain_to_lightning",
+  sendAsset: { asset: "BTC", chain: "bitcoin", network: "mainnet", rail: "onchain" },
+  receiveAsset: { asset: "BTC", chain: "bitcoin", network: "mainnet", rail: "lightning" },
+  amount: { value: "50000", unit: "sat" },
+  receiveInvoice: "lnbc...",
 });
 
-const lightningToOnchain = await client.createLightningToOnchainSwap({
-  amountSats: 50000,
-  destinationAddress: "bc1q...",
+const lightningToOnchain = await client.createSwap({
+  direction: "lightning_to_onchain",
+  sendAsset: { asset: "BTC", chain: "bitcoin", network: "mainnet", rail: "lightning" },
+  receiveAsset: { asset: "BTC", chain: "bitcoin", network: "mainnet", rail: "onchain" },
+  amount: { value: "50000", unit: "sat" },
+  receiveAddress: "bc1q...",
 });
 
 const status = await client.getSwapStatus({
@@ -267,10 +275,9 @@ const refreshed = await client.refreshSwapStatus({
 Underlying NWC method names:
 
 ```text
-create_onchain_to_lightning_swap
-create_lightning_to_onchain_swap
-get_swap_status
-refresh_swap_status
+create_swap
+get_swap
+refresh_swap
 ```
 
 ---
@@ -282,7 +289,7 @@ NwcKit exposes public amounts in sats where possible:
 * `makeInvoice({ amount })` accepts sats and sends msats over NWC
 * `getBalance()` returns sats
 * invoice and transaction amounts are normalized to sats
-* swap methods use explicit `amountSats`
+* swap methods use explicit `{ value, unit }` amounts
 
 This keeps app code ergonomic while matching NWC wallet expectations internally.
 

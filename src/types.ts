@@ -92,6 +92,42 @@ export interface CreateLightningToOnchainSwapParams {
   destinationAddress: string;
 }
 
+export type SwapRail = "onchain" | "lightning";
+export type SwapNetwork = "mainnet" | "testnet" | "signet" | "regtest";
+export type SwapAssetCode = "BTC" | string;
+export type SwapAmountUnit = "sat" | string;
+export type SwapDirection = "onchain_to_lightning" | "lightning_to_onchain";
+
+export interface SwapAsset {
+  asset: SwapAssetCode;
+  chain: "bitcoin" | string;
+  network: SwapNetwork;
+  rail: SwapRail | string;
+}
+
+export interface SwapAmount {
+  value: string;
+  unit: SwapAmountUnit;
+}
+
+export interface CreateSwapParams {
+  direction: SwapDirection;
+  sendAsset: SwapAsset;
+  receiveAsset: SwapAsset;
+  amount: SwapAmount;
+  receiveInvoice?: string;
+  receiveAddress?: string;
+}
+
+export interface CreateSwapRequestParams {
+  direction: SwapDirection;
+  send_asset: SwapAsset;
+  receive_asset: SwapAsset;
+  amount: SwapAmount;
+  receive_invoice?: string;
+  receive_address?: string;
+}
+
 export interface SwapStatusParams {
   swapId: string;
 }
@@ -101,11 +137,16 @@ export interface OnchainToLightningSwapResponse {
   operationId?: string;
   swapId: string;
   direction?: string;
+  sendAsset?: SwapAsset;
+  receiveAsset?: SwapAsset;
+  amount?: SwapAmount;
   status?: string;
   depositAddress: string;
   bip21?: string;
   expectedAmount?: number;
   timeoutBlockHeight?: number;
+  feeSats?: number;
+  feePaymentHash?: string;
 }
 
 export interface LightningToOnchainSwapResponse {
@@ -113,17 +154,29 @@ export interface LightningToOnchainSwapResponse {
   operationId?: string;
   swapId: string;
   direction?: string;
+  sendAsset?: SwapAsset;
+  receiveAsset?: SwapAsset;
+  amount?: SwapAmount;
   status?: string;
   invoice: string;
   lockupAddress?: string;
   timeoutBlockHeight?: number;
+  feeSats?: number;
+  feePaymentHash?: string;
 }
+
+export type CreateSwapResponse =
+  | OnchainToLightningSwapResponse
+  | LightningToOnchainSwapResponse;
 
 export interface SwapOperationStatusResponse {
   operationId?: string;
   swapId: string;
   type?: string;
   direction?: string;
+  sendAsset?: SwapAsset;
+  receiveAsset?: SwapAsset;
+  amount?: SwapAmount;
   status?: string;
   boltzStatus?: string;
   amountSats?: number;
@@ -179,27 +232,17 @@ export interface NwcMethodMap {
     params: ListTransactionsParams;
     result: ListTransactionsResponse;
   };
-  create_onchain_to_lightning_swap: {
-    params: {
-      amount_sats: number;
-      invoice: string;
-    };
-    result: OnchainToLightningSwapResponse;
+  create_swap: {
+    params: CreateSwapRequestParams;
+    result: CreateSwapResponse;
   };
-  create_lightning_to_onchain_swap: {
-    params: {
-      amount_sats: number;
-      destination_address: string;
-    };
-    result: LightningToOnchainSwapResponse;
-  };
-  get_swap_status: {
+  get_swap: {
     params: {
       swap_id: string;
     };
     result: SwapOperationStatusResponse;
   };
-  refresh_swap_status: {
+  refresh_swap: {
     params: {
       swap_id: string;
     };
