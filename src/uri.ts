@@ -28,3 +28,12 @@ export function parseNwcUri(uri: string): NwcConnection {
     lud16,
   };
 }
+
+export function isNwcUri(value: string): boolean {
+  try {
+    parseNwcUri(value);
+    return true;
+  } catch {
+    return false;
+  }
+}

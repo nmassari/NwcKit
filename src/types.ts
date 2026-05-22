@@ -19,6 +19,20 @@ export interface NwcWalletInfo {
   methods?: string[];
 }
 
+export interface NwcCapabilities {
+  methods: string[];
+  canGetInfo: boolean;
+  canGetBalance: boolean;
+  canMakeInvoice: boolean;
+  canPayInvoice: boolean;
+  canLookupInvoice: boolean;
+  canListTransactions: boolean;
+  canCreateSwap: boolean;
+  canGetSwap: boolean;
+  canRefreshSwap: boolean;
+  canSwap: boolean;
+}
+
 export interface NwcBalanceResponse {
   balance: number;
 }

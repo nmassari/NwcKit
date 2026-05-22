@@ -8,11 +8,13 @@ import {
 } from "nostr-tools";
 
 import { encryptContent, decryptContent } from "./crypto.js";
+import { btcMainnetLightning, btcMainnetOnchain } from "./assets.js";
 
 import type {
   NwcConnection,
   NwcKitOptions,
   NwcWalletInfo,
+  NwcCapabilities,
   MakeInvoiceParams,
   PayInvoiceParams,
   LookupInvoiceParams,
@@ -201,6 +203,23 @@ export class NwcKit {
     }
 
     return this.request("get_info", {});
+  }
+
+  async supports(method: string, info?: NwcWalletInfo): Promise<boolean> {
+    const walletInfo = info ?? (await this.getInfo());
+    return walletInfoSupports(walletInfo, method);
+  }
+
+  async supportsSwaps(info?: NwcWalletInfo): Promise<boolean> {
+    const walletInfo = info ?? (await this.getInfo());
+    const capabilities = getCapabilitiesFromInfo(walletInfo);
+
+    return capabilities.canSwap;
+  }
+
+  async getCapabilities(info?: NwcWalletInfo): Promise<NwcCapabilities> {
+    const walletInfo = info ?? (await this.getInfo());
+    return getCapabilitiesFromInfo(walletInfo);
   }
 
   async getBalance(): Promise<NwcBalanceResponse> {
@@ -568,20 +587,39 @@ export class NwcKit {
 
 // ---- Helpers ----
 function bitcoinOnchainAsset(): SwapAsset {
-  return {
-    asset: "BTC",
-    chain: "bitcoin",
-    network: "mainnet",
-    rail: "onchain",
-  };
+  return btcMainnetOnchain();
 }
 
 function bitcoinLightningAsset(): SwapAsset {
+  return btcMainnetLightning();
+}
+
+function walletInfoSupports(info: NwcWalletInfo, method: string): boolean {
+  const normalized = method.trim();
+  if (!normalized) return false;
+
+  return (info.methods ?? []).includes(normalized);
+}
+
+function getCapabilitiesFromInfo(info: NwcWalletInfo): NwcCapabilities {
+  const methods = info.methods ?? [];
+  const has = (method: string) => methods.includes(method);
+  const canCreateSwap = has("create_swap");
+  const canGetSwap = has("get_swap");
+  const canRefreshSwap = has("refresh_swap");
+
   return {
-    asset: "BTC",
-    chain: "bitcoin",
-    network: "mainnet",
-    rail: "lightning",
+    methods,
+    canGetInfo: has("get_info"),
+    canGetBalance: has("get_balance"),
+    canMakeInvoice: has("make_invoice"),
+    canPayInvoice: has("pay_invoice"),
+    canLookupInvoice: has("lookup_invoice"),
+    canListTransactions: has("list_transactions"),
+    canCreateSwap,
+    canGetSwap,
+    canRefreshSwap,
+    canSwap: canCreateSwap && canGetSwap,
   };
 }
 

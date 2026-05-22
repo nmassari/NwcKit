@@ -11,14 +11,19 @@ No custody. No wallet switching. No node management in your frontend.
 
 > Think: a Nostr-native wallet action layer for Bitcoin apps.
 
-🚀 **Try the live wallet demo:** [EasyCryptoSend](https://easycryptosend.it)
+**Try the live wallet demo:** [EasyCryptoSend](https://easycryptosend.it)
 
 ---
 
 ## 30-second example
 
 ```ts
-import { NwcKit, parseNwcUri } from "nwckit";
+import {
+  BTC_MAINNET_LIGHTNING,
+  BTC_MAINNET_ONCHAIN,
+  NwcKit,
+  parseNwcUri,
+} from "nwckit";
 
 const connection = parseNwcUri("nostr+walletconnect://...");
 
@@ -33,13 +38,15 @@ const invoice = await client.makeInvoice({
   description: "Premium access",
 });
 
-const swap = await client.createSwap({
-  direction: "lightning_to_onchain",
-  sendAsset: { asset: "BTC", chain: "bitcoin", network: "mainnet", rail: "lightning" },
-  receiveAsset: { asset: "BTC", chain: "bitcoin", network: "mainnet", rail: "onchain" },
-  amount: { value: "2100", unit: "sat" },
-  receiveAddress: "bc1q...",
-});
+if (await client.supportsSwaps()) {
+  const swap = await client.createSwap({
+    direction: "lightning_to_onchain",
+    sendAsset: BTC_MAINNET_LIGHTNING,
+    receiveAsset: BTC_MAINNET_ONCHAIN,
+    amount: { value: "2100", unit: "sat" },
+    receiveAddress: "bc1q...",
+  });
+}
 
 await client.disconnect();
 ```
@@ -92,11 +99,14 @@ This keeps the app non-custodial while still giving it a compact API for Lightni
 ## Features
 
 * Nostr Wallet Connect URI parsing
+* NWC URI validation helper
 * Relay connection handling
 * Encrypted request/response flow
 * Browser-first TypeScript API
 * Standard NWC Lightning methods
 * Experimental NWC swap methods with explicit asset metadata
+* Wallet capability detection
+* BTC mainnet asset presets for swap requests
 * Sats-based public amounts with msat normalization internally
 * Built-in timeout and typed error handling
 * Debug logging option
@@ -203,6 +213,16 @@ await client.disconnect();
 }
 ```
 
+### `isNwcUri(value: string): boolean`
+
+```ts
+import { isNwcUri } from "nwckit";
+
+if (!isNwcUri(input)) {
+  throw new Error("Paste a valid NWC string");
+}
+```
+
 ### `new NwcKit(options)`
 
 ```ts
@@ -244,23 +264,46 @@ await client.listTransactions({
 });
 ```
 
+### Capability helpers
+
+Use wallet-advertised methods from `get_info` before enabling optional UI actions.
+
+```ts
+const info = await client.getInfo();
+
+await client.supports("pay_invoice", info);
+await client.supports("create_swap", info);
+await client.supportsSwaps(info);
+
+const capabilities = await client.getCapabilities(info);
+
+if (capabilities.canSwap) {
+  // Show swap UI
+}
+```
+
 ### Swap methods
 
 Swap methods are experimental NWC extensions intended to be NIP-ready. They work only when the connected wallet service supports and advertises them in `get_info`.
 
 ```ts
+import {
+  BTC_MAINNET_LIGHTNING,
+  BTC_MAINNET_ONCHAIN,
+} from "nwckit";
+
 const onchainToLightning = await client.createSwap({
   direction: "onchain_to_lightning",
-  sendAsset: { asset: "BTC", chain: "bitcoin", network: "mainnet", rail: "onchain" },
-  receiveAsset: { asset: "BTC", chain: "bitcoin", network: "mainnet", rail: "lightning" },
+  sendAsset: BTC_MAINNET_ONCHAIN,
+  receiveAsset: BTC_MAINNET_LIGHTNING,
   amount: { value: "50000", unit: "sat" },
   receiveInvoice: "lnbc...",
 });
 
 const lightningToOnchain = await client.createSwap({
   direction: "lightning_to_onchain",
-  sendAsset: { asset: "BTC", chain: "bitcoin", network: "mainnet", rail: "lightning" },
-  receiveAsset: { asset: "BTC", chain: "bitcoin", network: "mainnet", rail: "onchain" },
+  sendAsset: BTC_MAINNET_LIGHTNING,
+  receiveAsset: BTC_MAINNET_ONCHAIN,
   amount: { value: "50000", unit: "sat" },
   receiveAddress: "bc1q...",
 });
