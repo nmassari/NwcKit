@@ -11,6 +11,8 @@ No custody. No wallet switching. No node management in your frontend.
 
 > Think: a Nostr-native wallet action layer for Bitcoin apps.
 
+🚀 **Try the live wallet demo:** [EasyCryptoSend](https://easycryptosend.it)
+
 ---
 
 ## 30-second example
