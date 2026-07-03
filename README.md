@@ -75,6 +75,8 @@ It also supports experimental NWC swap extensions, when the connected wallet ser
 
 The swap flow is exposed through the NWC session, so the browser app keeps using one client for wallet actions and supported swaps.
 
+NwcKit also includes an experimental encrypted Nostr app-message layer for EasyCryptoSend-style payment notifications and subscription scheduling. This layer is separate from NWC wallet commands and is designed for wallet-to-wallet business messages such as subscription offers, invoice requests and invoice responses.
+
 ---
 
 ## Architecture
@@ -110,6 +112,8 @@ This keeps the app non-custodial while still giving it a compact API for Lightni
 * Sats-based public amounts with msat normalization internally
 * Built-in timeout and typed error handling
 * Debug logging option
+* Experimental encrypted Nostr app messages for subscription scheduling
+* Pull-invoice validation helpers using one-time request codes
 
 ---
 
@@ -128,6 +132,8 @@ Implemented:
 * `create_swap`
 * `get_swap`
 * `refresh_swap`
+* `NostrPaymentMessages`
+* subscription app-message types and invoice-response validation helpers
 
 Notes:
 
@@ -196,6 +202,83 @@ await client.lookupInvoice({
 await client.listTransactions({ limit: 10 });
 
 await client.disconnect();
+```
+
+---
+
+## Experimental subscription messages
+
+The app-message layer uses encrypted Nostr events with:
+
+```text
+kind: 31947
+protocol: ecs-subscriptions
+version: 0.1
+```
+
+It is intended for flows where two wallets coordinate a recurring payment without giving a server custody of customer payment authority.
+
+MVP message types:
+
+* `subscription.offer`
+* `subscription.accepted`
+* `subscription.invoice_request`
+* `subscription.invoice_response`
+* `subscription.payment_sent`
+* `subscription.payment_failed`
+* `subscription.cancel`
+
+The key safety rule is:
+
+```text
+Autopay only pays an invoice_response that answers a local, fresh, unconsumed invoice_request.
+```
+
+Example:
+
+```ts
+import {
+  NostrPaymentMessages,
+  generateInvoiceRequestCode,
+  validateSubscriptionInvoiceResponse,
+} from "nwckit";
+
+const messages = new NostrPaymentMessages({
+  privateKey: "customer_private_key_hex",
+  relays: ["wss://relay.easycryptosend.it/api/relay"],
+});
+
+messages.subscribe();
+
+const requestCode = generateInvoiceRequestCode();
+
+await messages.send({
+  recipientPubkey: merchantPubkey,
+  type: "subscription.invoice_request",
+  payload: {
+    subscriptionId: "sub_123",
+    merchantPubkey,
+    customerPubkey: messages.pubkey,
+    billingPeriod: "2026-07",
+    requestCode,
+    amountSatsExpected: 10000,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+  },
+});
+```
+
+When an invoice response arrives, validate it before paying:
+
+```ts
+const validation = validateSubscriptionInvoiceResponse({
+  response: invoiceResponsePayload,
+  pendingRequest,
+});
+
+if (validation.ok) {
+  await nwc.payInvoice(invoiceResponsePayload.invoice);
+}
 ```
 
 ---

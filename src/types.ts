@@ -265,3 +265,195 @@ export interface NwcMethodMap {
 }
 
 export type NwcMethod = keyof NwcMethodMap;
+
+export const ECS_APP_MESSAGE_PROTOCOL = "ecs-subscriptions";
+export const ECS_APP_MESSAGE_VERSION = "0.1";
+export const ECS_APP_MESSAGE_KIND = 31947;
+
+export type EcsAppMessageType =
+  | "payment.notification"
+  | "subscription.offer"
+  | "subscription.accepted"
+  | "subscription.rejected"
+  | "subscription.invoice_request"
+  | "subscription.invoice_response"
+  | "subscription.payment_sent"
+  | "subscription.payment_failed"
+  | "subscription.pause"
+  | "subscription.resume"
+  | "subscription.cancel"
+  | "subscription.terms_update"
+  | "subscription.ack";
+
+export type SubscriptionInterval =
+  | "daily"
+  | "weekly"
+  | "monthly"
+  | "yearly";
+
+export type SubscriptionStatus =
+  | "pending"
+  | "active"
+  | "paused"
+  | "cancelled"
+  | "expired";
+
+export type SubscriptionPaymentPolicy = "manual_confirm" | "autopay";
+
+export interface EcsAppMessageEnvelope<TPayload = unknown> {
+  protocol: typeof ECS_APP_MESSAGE_PROTOCOL;
+  version: typeof ECS_APP_MESSAGE_VERSION;
+  type: EcsAppMessageType;
+  messageId: string;
+  createdAt: string;
+  payload: TPayload;
+}
+
+export interface EcsAppMessage<TPayload = unknown> extends EcsAppMessageEnvelope<TPayload> {
+  eventId: string;
+  senderPubkey: string;
+  recipientPubkey?: string;
+  relayUrl?: string;
+  receivedAt: string;
+}
+
+export interface EcsAppMessageOptions {
+  privateKey: string;
+  relays: string[];
+  timeoutMs?: number;
+  debug?: boolean;
+}
+
+export interface SendEcsAppMessageParams<TPayload = unknown> {
+  recipientPubkey: string;
+  type: EcsAppMessageType;
+  payload: TPayload;
+  messageId?: string;
+  createdAt?: string;
+  tags?: string[][];
+}
+
+export interface SubscriptionTerms {
+  subscriptionId: string;
+  merchantPubkey: string;
+  customerPubkey?: string;
+  amountSats: number;
+  interval: SubscriptionInterval;
+  maxAmountSats: number;
+  description: string;
+  startsAt: string;
+  expiresAt?: string;
+  paymentPolicy?: SubscriptionPaymentPolicy;
+  merchantName?: string;
+  merchantDomain?: string;
+  termsHash?: string;
+}
+
+export interface SubscriptionOfferPayload extends SubscriptionTerms {
+  initialInvoice?: string;
+}
+
+export interface SubscriptionAcceptedPayload {
+  subscriptionId: string;
+  customerPubkey: string;
+  merchantPubkey: string;
+  acceptedAt: string;
+  termsHash?: string;
+}
+
+export interface SubscriptionRejectedPayload {
+  subscriptionId: string;
+  customerPubkey: string;
+  merchantPubkey: string;
+  rejectedAt: string;
+  reason?: string;
+}
+
+export interface SubscriptionInvoiceRequestPayload {
+  subscriptionId: string;
+  merchantPubkey: string;
+  customerPubkey: string;
+  billingPeriod: string;
+  sequence?: number;
+  requestCode: string;
+  amountSatsExpected: number;
+  createdAt: string;
+  expiresAt: string;
+  previousPaymentHash?: string;
+}
+
+export interface SubscriptionInvoiceResponsePayload {
+  subscriptionId: string;
+  merchantPubkey: string;
+  customerPubkey: string;
+  billingPeriod: string;
+  sequence?: number;
+  requestCode: string;
+  invoice: string;
+  amountSats: number;
+  description?: string;
+  createdAt: string;
+  expiresAt?: string;
+}
+
+export interface SubscriptionPaymentSentPayload {
+  subscriptionId: string;
+  merchantPubkey: string;
+  customerPubkey: string;
+  billingPeriod: string;
+  invoice: string;
+  amountSats: number;
+  paymentHash?: string;
+  preimage?: string;
+  paidAt: string;
+}
+
+export interface SubscriptionPaymentFailedPayload {
+  subscriptionId: string;
+  merchantPubkey: string;
+  customerPubkey: string;
+  billingPeriod: string;
+  invoice?: string;
+  amountSats?: number;
+  failedAt: string;
+  code: string;
+  message: string;
+}
+
+export interface SubscriptionLifecyclePayload {
+  subscriptionId: string;
+  merchantPubkey: string;
+  customerPubkey: string;
+  reason?: string;
+  createdAt: string;
+}
+
+export interface SubscriptionAckPayload {
+  messageId: string;
+  receivedEventId?: string;
+  subscriptionId?: string;
+  receivedAt: string;
+}
+
+export interface PendingSubscriptionInvoiceRequest {
+  subscriptionId: string;
+  merchantPubkey: string;
+  customerPubkey: string;
+  billingPeriod: string;
+  requestCode: string;
+  amountSatsExpected: number;
+  expiresAt: string;
+  sequence?: number;
+  consumed?: boolean;
+}
+
+export interface ValidateSubscriptionInvoiceResponseParams {
+  response: SubscriptionInvoiceResponsePayload;
+  pendingRequest: PendingSubscriptionInvoiceRequest;
+  now?: Date;
+}
+
+export interface SubscriptionInvoiceValidationResult {
+  ok: boolean;
+  errors: string[];
+}
