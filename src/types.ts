@@ -60,7 +60,10 @@ export interface PayInvoiceParams {
 
 export interface PayInvoiceResponse {
   preimage?: string;
+  payment_hash?: string;
   fees_paid?: number;
+  service_fee_paid?: number;
+  service_fee_payment_hash?: string;
 }
 
 export interface LookupInvoiceParams {

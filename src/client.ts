@@ -255,6 +255,10 @@ export class NwcKit {
         result.fees_paid !== undefined
           ? msatsToSats(result.fees_paid)
           : result.fees_paid,
+      service_fee_paid:
+        result.service_fee_paid !== undefined
+          ? msatsToSats(result.service_fee_paid)
+          : result.service_fee_paid,
     };
   }
 
@@ -664,12 +668,15 @@ function msatsToSats(msats: number): number {
 function normalizeInvoiceAmounts<T extends {
   amount?: number;
   fees_paid?: number;
+  service_fee_paid?: number;
 }>(obj: T): T {
   return {
     ...obj,
     amount: obj.amount !== undefined ? msatsToSats(obj.amount) : obj.amount,
     fees_paid:
       obj.fees_paid !== undefined ? msatsToSats(obj.fees_paid) : obj.fees_paid,
+    service_fee_paid:
+      obj.service_fee_paid !== undefined ? msatsToSats(obj.service_fee_paid) : obj.service_fee_paid,
   };
 }
 
