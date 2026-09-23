@@ -113,7 +113,10 @@ export type SwapRail = "onchain" | "lightning";
 export type SwapNetwork = "mainnet" | "testnet" | "signet" | "regtest";
 export type SwapAssetCode = "BTC" | string;
 export type SwapAmountUnit = "sat" | string;
-export type SwapDirection = "onchain_to_lightning" | "lightning_to_onchain";
+export type SwapDirection =
+  | "onchain_to_lightning"
+  | "lightning_to_onchain"
+  | string;
 
 export interface SwapAsset {
   asset: SwapAssetCode;
@@ -182,9 +185,26 @@ export interface LightningToOnchainSwapResponse {
   feePaymentHash?: string;
 }
 
-export type CreateSwapResponse =
-  | OnchainToLightningSwapResponse
-  | LightningToOnchainSwapResponse;
+export interface GenericSwapResponse {
+  ok?: boolean;
+  operationId?: string;
+  swapId: string;
+  direction?: string;
+  sendAsset?: SwapAsset;
+  receiveAsset?: SwapAsset;
+  amount?: SwapAmount;
+  status?: string;
+  depositAddress?: string;
+  bip21?: string;
+  invoice?: string;
+  lockupAddress?: string;
+  expectedAmount?: number;
+  timeoutBlockHeight?: number;
+  feeSats?: number;
+  feePaymentHash?: string;
+}
+
+export type CreateSwapResponse = GenericSwapResponse;
 
 export interface SwapOperationStatusResponse {
   operationId?: string;

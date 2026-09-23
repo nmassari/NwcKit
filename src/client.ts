@@ -315,11 +315,11 @@ export class NwcKit {
   }
 
   async createSwap(params: CreateSwapParams): Promise<CreateSwapResponse> {
-    const amountSats = Number(params.amount?.value);
-    assertPositiveSats(amountSats);
+    const amountValue = Number(params.amount?.value);
+    assertPositiveAmount(amountValue);
 
-    if (params.amount.unit !== "sat") {
-      throw new Error("Only sat amounts are supported");
+    if (!params.amount?.unit?.trim()) {
+      throw new Error("Amount unit is required");
     }
 
     if (params.direction === "onchain_to_lightning" && !params.receiveInvoice?.trim()) {
@@ -335,8 +335,8 @@ export class NwcKit {
       send_asset: params.sendAsset,
       receive_asset: params.receiveAsset,
       amount: {
-        value: String(Math.round(amountSats)),
-        unit: "sat",
+        value: normalizeAmountValue(amountValue, params.amount.unit),
+        unit: params.amount.unit.trim(),
       },
       receive_invoice: params.receiveInvoice?.trim(),
       receive_address: params.receiveAddress?.trim(),
@@ -646,6 +646,18 @@ function assertPositiveSats(sats: number): void {
   if (!Number.isFinite(sats) || sats <= 0) {
     throw new Error("Amount must be a positive number in sats");
   }
+}
+
+function assertPositiveAmount(amount: number): void {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error("Amount must be a positive number");
+  }
+}
+
+function normalizeAmountValue(amount: number, unit: string): string {
+  return unit.trim().toLowerCase() === "sat"
+    ? String(Math.round(amount))
+    : String(amount);
 }
 
 function normalizeSwapId(swapId: string): string {
