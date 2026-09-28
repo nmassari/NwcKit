@@ -33,6 +33,15 @@ await client.connect();
 
 await client.payInvoice("lnbc...");
 
+const assetBalances = await client.getAssetBalances();
+
+const usdtInvoice = await client.makeTaprootAssetInvoice({
+  asset: "LNUSDT",
+  amount: "10.50",
+  unit: "USDT",
+  description: "USDT Lightning payment",
+});
+
 const invoice = await client.makeInvoice({
   amount: 2100,
   description: "Premium access",
@@ -70,8 +79,15 @@ It also supports experimental NWC swap extensions, when the connected wallet ser
 
 * Create on-chain to Lightning swaps
 * Create Lightning to on-chain swaps
+* Request BTC, LNBTC, USDT Taproot Assets and LNUSDT routes with explicit asset metadata
 * Read swap status
 * Refresh swap status from the swap provider
+
+It also includes experimental Taproot Asset Lightning helpers for compatible wallet services:
+
+* Read Taproot Asset balances
+* Create LNUSDT invoices
+* Pay LNUSDT invoices
 
 The swap flow is exposed through the NWC session, so the browser app keeps using one client for wallet actions and supported swaps.
 
@@ -106,9 +122,10 @@ This keeps the app non-custodial while still giving it a compact API for Lightni
 * Encrypted request/response flow
 * Browser-first TypeScript API
 * Standard NWC Lightning methods
+* Experimental NWC Taproot Asset Lightning methods
 * Experimental NWC swap methods with explicit asset metadata
 * Wallet capability detection
-* BTC mainnet asset presets for swap requests
+* BTC and USDT mainnet asset presets for swap requests
 * Sats-based public amounts with msat normalization internally
 * Built-in timeout and typed error handling
 * Debug logging option
@@ -129,6 +146,9 @@ Implemented:
 * `pay_invoice`
 * `lookup_invoice`
 * `list_transactions`
+* `get_taproot_asset_balances`
+* `make_taproot_asset_invoice`
+* `pay_taproot_asset_invoice`
 * `create_swap`
 * `get_swap`
 * `refresh_swap`
@@ -200,6 +220,22 @@ await client.lookupInvoice({
 });
 
 await client.listTransactions({ limit: 10 });
+
+const assets = await client.getAssetBalances();
+
+const usdtLightningInvoice = await client.makeTaprootAssetInvoice({
+  asset: "LNUSDT",
+  amount: "25.00",
+  unit: "USDT",
+  description: "USDT Lightning invoice",
+});
+
+await client.payTaprootAssetInvoice({
+  asset: "LNUSDT",
+  invoice: "ln...",
+  amount: "25.00",
+  unit: "USDT",
+});
 
 await client.disconnect();
 ```
@@ -355,6 +391,9 @@ Use wallet-advertised methods from `get_info` before enabling optional UI action
 const info = await client.getInfo();
 
 await client.supports("pay_invoice", info);
+await client.supports("get_taproot_asset_balances", info);
+await client.supports("make_taproot_asset_invoice", info);
+await client.supports("pay_taproot_asset_invoice", info);
 await client.supports("create_swap", info);
 await client.supportsSwaps(info);
 
@@ -365,6 +404,34 @@ if (capabilities.canSwap) {
 }
 ```
 
+### Taproot Asset Lightning methods
+
+Taproot Asset methods are experimental NWC extensions for compatible wallet services. NwcKit uses `LNUSDT` as the default asset code and `USDT` as the default unit for these helpers.
+
+```ts
+const balances = await client.getAssetBalances();
+
+const invoice = await client.makeTaprootAssetInvoice({
+  amount: "10.50",
+  description: "Order #123",
+});
+
+const payment = await client.payTaprootAssetInvoice({
+  invoice: invoice.invoice,
+  amount: "10.50",
+});
+```
+
+Underlying NWC method names:
+
+```text
+get_taproot_asset_balances
+make_taproot_asset_invoice
+pay_taproot_asset_invoice
+```
+
+These methods only work when the connected NWC provider advertises and implements them. Asset authenticity, such as the official USDT Taproot Asset group key, is enforced by the wallet service/provider rather than by browser code.
+
 ### Swap methods
 
 Swap methods are experimental NWC extensions intended to be NIP-ready. They work only when the connected wallet service supports and advertises them in `get_info`.
@@ -373,6 +440,8 @@ Swap methods are experimental NWC extensions intended to be NIP-ready. They work
 import {
   BTC_MAINNET_LIGHTNING,
   BTC_MAINNET_ONCHAIN,
+  USDT_MAINNET_LIGHTNING,
+  USDT_MAINNET_TAPROOT,
 } from "nwckit";
 
 const onchainToLightning = await client.createSwap({
@@ -398,6 +467,14 @@ const status = await client.getSwapStatus({
 const refreshed = await client.refreshSwapStatus({
   swapId: lightningToOnchain.swapId,
 });
+
+const usdtToLnUsdt = await client.createSwap({
+  direction: "onchain_to_lightning",
+  sendAsset: USDT_MAINNET_TAPROOT,
+  receiveAsset: USDT_MAINNET_LIGHTNING,
+  amount: { value: "10.50", unit: "USDT" },
+  receiveInvoice: "ln...",
+});
 ```
 
 Underlying NWC method names:
@@ -418,6 +495,7 @@ NwcKit exposes public amounts in sats where possible:
 * `getBalance()` returns sats
 * invoice and transaction amounts are normalized to sats
 * swap methods use explicit `{ value, unit }` amounts
+* Taproot Asset methods use decimal string amounts with explicit units such as `USDT`
 
 This keeps app code ergonomic while matching NWC wallet expectations internally.
 
@@ -430,6 +508,7 @@ This keeps app code ergonomic while matching NWC wallet expectations internally.
 * Requests and responses are encrypted over Nostr
 * NwcKit does not custody funds
 * Swap execution depends on the connected wallet service and its backend policy
+* Taproot Asset identity verification is the responsibility of the connected wallet service/provider
 
 ---
 
