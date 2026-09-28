@@ -8,7 +8,7 @@ type NwcMethodMap = {
         params: Record<string, never>;
         result: NwcBalanceResponse;
     };
-    get_asset_balances: {
+    get_taproot_asset_balances: {
         params: Record<string, never>;
         result: NwcAssetBalancesResponse;
     };

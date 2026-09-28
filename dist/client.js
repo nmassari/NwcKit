@@ -105,7 +105,7 @@ export class NwcKit {
         };
     }
     async getAssetBalances() {
-        return this.request("get_asset_balances", {});
+        return this.request("get_taproot_asset_balances", {});
     }
     async makeInvoice(params) {
         const fixedParams = {

@@ -53,7 +53,7 @@ type NwcMethodMap = {
     params: Record<string, never>;
     result: NwcBalanceResponse;
   };
-  get_asset_balances: {
+  get_taproot_asset_balances: {
     params: Record<string, never>;
     result: NwcAssetBalancesResponse;
   };
@@ -237,7 +237,7 @@ export class NwcKit {
   }
 
   async getAssetBalances(): Promise<NwcAssetBalancesResponse> {
-    return this.request("get_asset_balances", {});
+    return this.request("get_taproot_asset_balances", {});
   }
     async makeInvoice(params: MakeInvoiceParams): Promise<MakeInvoiceResponse> {
     const fixedParams: MakeInvoiceParams = {
