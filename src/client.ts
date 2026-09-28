@@ -17,6 +17,8 @@ import type {
   NwcCapabilities,
   MakeInvoiceParams,
   PayInvoiceParams,
+  MakeTaprootAssetInvoiceParams,
+  PayTaprootAssetInvoiceParams,
   LookupInvoiceParams,
   ListTransactionsParams,
   CreateSwapParams,
@@ -31,6 +33,8 @@ import type {
   NwcAssetBalancesResponse,
   MakeInvoiceResponse,
   PayInvoiceResponse,
+  MakeTaprootAssetInvoiceResponse,
+  PayTaprootAssetInvoiceResponse,
   InvoiceLookupResponse,
   ListTransactionsResponse,
   OnchainToLightningSwapResponse,
@@ -64,6 +68,14 @@ type NwcMethodMap = {
   pay_invoice: {
     params: PayInvoiceParams;
     result: PayInvoiceResponse;
+  };
+  make_taproot_asset_invoice: {
+    params: MakeTaprootAssetInvoiceParams;
+    result: MakeTaprootAssetInvoiceResponse;
+  };
+  pay_taproot_asset_invoice: {
+    params: PayTaprootAssetInvoiceParams;
+    result: PayTaprootAssetInvoiceResponse;
   };
   lookup_invoice: {
     params: LookupInvoiceParams;
@@ -269,6 +281,40 @@ export class NwcKit {
           ? msatsToSats(result.service_fee_paid)
           : result.service_fee_paid,
     };
+  }
+
+  async makeTaprootAssetInvoice(
+    params: MakeTaprootAssetInvoiceParams
+  ): Promise<MakeTaprootAssetInvoiceResponse> {
+    const amountValue = Number(params.amount);
+    assertPositiveAmount(amountValue);
+
+    return this.request("make_taproot_asset_invoice", {
+      ...params,
+      asset: params.asset ?? "LNUSDT",
+      amount: normalizeAmountValue(amountValue, params.unit ?? "USDT"),
+      unit: params.unit ?? "USDT",
+    });
+  }
+
+  async payTaprootAssetInvoice(
+    params: PayTaprootAssetInvoiceParams
+  ): Promise<PayTaprootAssetInvoiceResponse> {
+    if (!params.invoice?.trim()) {
+      throw new Error("Invoice is required");
+    }
+
+    const amount = params.amount === undefined
+      ? undefined
+      : normalizeAmountValue(Number(params.amount), params.unit ?? "USDT");
+
+    return this.request("pay_taproot_asset_invoice", {
+      ...params,
+      asset: params.asset ?? "LNUSDT",
+      invoice: params.invoice.trim(),
+      amount,
+      unit: params.unit ?? "USDT",
+    });
   }
 
   async lookupInvoice(

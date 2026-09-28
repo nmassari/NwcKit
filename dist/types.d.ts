@@ -69,6 +69,35 @@ export interface PayInvoiceResponse {
     service_fee_paid?: number;
     service_fee_payment_hash?: string;
 }
+export interface MakeTaprootAssetInvoiceParams {
+    asset?: "LNUSDT" | string;
+    amount: string | number;
+    unit?: "USDT" | string;
+    description?: string;
+    expiry?: number;
+}
+export interface MakeTaprootAssetInvoiceResponse {
+    asset?: string;
+    unit?: string;
+    invoice: string;
+    payment_hash?: string;
+    amount?: string;
+    created_at?: number;
+    expires_at?: number;
+}
+export interface PayTaprootAssetInvoiceParams {
+    asset?: "LNUSDT" | string;
+    invoice: string;
+    amount?: string | number;
+    unit?: "USDT" | string;
+}
+export interface PayTaprootAssetInvoiceResponse {
+    asset?: string;
+    unit?: string;
+    preimage?: string;
+    payment_hash?: string;
+    fees_paid?: string;
+}
 export interface LookupInvoiceParams {
     invoice?: string;
     payment_hash?: string;
@@ -245,6 +274,14 @@ export interface NwcMethodMap {
     pay_invoice: {
         params: PayInvoiceParams;
         result: PayInvoiceResponse;
+    };
+    make_taproot_asset_invoice: {
+        params: MakeTaprootAssetInvoiceParams;
+        result: MakeTaprootAssetInvoiceResponse;
+    };
+    pay_taproot_asset_invoice: {
+        params: PayTaprootAssetInvoiceParams;
+        result: PayTaprootAssetInvoiceResponse;
     };
     lookup_invoice: {
         params: LookupInvoiceParams;

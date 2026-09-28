@@ -128,6 +128,31 @@ export class NwcKit {
                 : result.service_fee_paid,
         };
     }
+    async makeTaprootAssetInvoice(params) {
+        const amountValue = Number(params.amount);
+        assertPositiveAmount(amountValue);
+        return this.request("make_taproot_asset_invoice", {
+            ...params,
+            asset: params.asset ?? "LNUSDT",
+            amount: normalizeAmountValue(amountValue, params.unit ?? "USDT"),
+            unit: params.unit ?? "USDT",
+        });
+    }
+    async payTaprootAssetInvoice(params) {
+        if (!params.invoice?.trim()) {
+            throw new Error("Invoice is required");
+        }
+        const amount = params.amount === undefined
+            ? undefined
+            : normalizeAmountValue(Number(params.amount), params.unit ?? "USDT");
+        return this.request("pay_taproot_asset_invoice", {
+            ...params,
+            asset: params.asset ?? "LNUSDT",
+            invoice: params.invoice.trim(),
+            amount,
+            unit: params.unit ?? "USDT",
+        });
+    }
     async lookupInvoice(params) {
         const result = await this.request("lookup_invoice", params);
         return normalizeInvoiceAmounts(result);
