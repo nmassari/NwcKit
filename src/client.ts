@@ -28,6 +28,7 @@ import type {
   SwapStatusParams,
   NwcResponse,
   NwcBalanceResponse,
+  NwcAssetBalancesResponse,
   MakeInvoiceResponse,
   PayInvoiceResponse,
   InvoiceLookupResponse,
@@ -51,6 +52,10 @@ type NwcMethodMap = {
   get_balance: {
     params: Record<string, never>;
     result: NwcBalanceResponse;
+  };
+  get_asset_balances: {
+    params: Record<string, never>;
+    result: NwcAssetBalancesResponse;
   };
   make_invoice: {
     params: MakeInvoiceParams;
@@ -229,6 +234,10 @@ export class NwcKit {
       ...result,
       balance: msatsToSats(result.balance),
     };
+  }
+
+  async getAssetBalances(): Promise<NwcAssetBalancesResponse> {
+    return this.request("get_asset_balances", {});
   }
     async makeInvoice(params: MakeInvoiceParams): Promise<MakeInvoiceResponse> {
     const fixedParams: MakeInvoiceParams = {

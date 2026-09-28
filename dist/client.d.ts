@@ -1,4 +1,4 @@
-import type { NwcKitOptions, NwcWalletInfo, NwcCapabilities, MakeInvoiceParams, PayInvoiceParams, LookupInvoiceParams, ListTransactionsParams, CreateSwapParams, CreateSwapRequestParams, CreateSwapResponse, CreateOnchainToLightningSwapParams, CreateLightningToOnchainSwapParams, SwapStatusParams, NwcBalanceResponse, MakeInvoiceResponse, PayInvoiceResponse, InvoiceLookupResponse, ListTransactionsResponse, OnchainToLightningSwapResponse, LightningToOnchainSwapResponse, SwapOperationStatusResponse, RefreshSwapStatusResponse } from "./types.js";
+import type { NwcKitOptions, NwcWalletInfo, NwcCapabilities, MakeInvoiceParams, PayInvoiceParams, LookupInvoiceParams, ListTransactionsParams, CreateSwapParams, CreateSwapRequestParams, CreateSwapResponse, CreateOnchainToLightningSwapParams, CreateLightningToOnchainSwapParams, SwapStatusParams, NwcBalanceResponse, NwcAssetBalancesResponse, MakeInvoiceResponse, PayInvoiceResponse, InvoiceLookupResponse, ListTransactionsResponse, OnchainToLightningSwapResponse, LightningToOnchainSwapResponse, SwapOperationStatusResponse, RefreshSwapStatusResponse } from "./types.js";
 type NwcMethodMap = {
     get_info: {
         params: Record<string, never>;
@@ -7,6 +7,10 @@ type NwcMethodMap = {
     get_balance: {
         params: Record<string, never>;
         result: NwcBalanceResponse;
+    };
+    get_asset_balances: {
+        params: Record<string, never>;
+        result: NwcAssetBalancesResponse;
     };
     make_invoice: {
         params: MakeInvoiceParams;
@@ -69,6 +73,7 @@ export declare class NwcKit {
     supportsSwaps(info?: NwcWalletInfo): Promise<boolean>;
     getCapabilities(info?: NwcWalletInfo): Promise<NwcCapabilities>;
     getBalance(): Promise<NwcBalanceResponse>;
+    getAssetBalances(): Promise<NwcAssetBalancesResponse>;
     makeInvoice(params: MakeInvoiceParams): Promise<MakeInvoiceResponse>;
     payInvoice(invoice: string): Promise<PayInvoiceResponse>;
     payInvoice(params: PayInvoiceParams): Promise<PayInvoiceResponse>;

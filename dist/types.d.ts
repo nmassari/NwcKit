@@ -32,6 +32,18 @@ export interface NwcCapabilities {
 export interface NwcBalanceResponse {
     balance: number;
 }
+export interface NwcAssetBalance {
+    asset: string;
+    unit: string;
+    balance: string;
+    available?: string;
+    pending?: string;
+    locked?: string;
+    status?: string;
+}
+export interface NwcAssetBalancesResponse {
+    balances: NwcAssetBalance[];
+}
 export interface MakeInvoiceParams {
     amount: number;
     description?: string;
@@ -221,6 +233,10 @@ export interface NwcMethodMap {
     get_balance: {
         params: Record<string, never>;
         result: NwcBalanceResponse;
+    };
+    get_asset_balances: {
+        params: Record<string, never>;
+        result: NwcAssetBalancesResponse;
     };
     make_invoice: {
         params: MakeInvoiceParams;

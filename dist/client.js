@@ -104,6 +104,9 @@ export class NwcKit {
             balance: msatsToSats(result.balance),
         };
     }
+    async getAssetBalances() {
+        return this.request("get_asset_balances", {});
+    }
     async makeInvoice(params) {
         const fixedParams = {
             ...params,
