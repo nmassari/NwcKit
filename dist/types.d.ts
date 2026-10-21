@@ -4,6 +4,16 @@ export interface NwcConnection {
     relayUrl: string;
     lud16?: string;
 }
+export interface NwcClientIdentity {
+    secret: string;
+    publicKey: string;
+}
+export interface BuildNwcUriParams {
+    walletPubkey: string;
+    relayUrl: string;
+    secret: string;
+    lud16?: string;
+}
 export interface NwcKitOptions {
     connection: NwcConnection;
     timeoutMs?: number;

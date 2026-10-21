@@ -1,3 +1,33 @@
+import { generateSecretKey, getPublicKey } from "nostr-tools";
+const hexKeyPattern = /^[0-9a-f]{64}$/i;
+function bytesToHex(value) {
+    return Array.from(value, byte => byte.toString(16).padStart(2, "0")).join("");
+}
+function requireHexKey(value, name) {
+    const normalized = value.trim().toLowerCase();
+    if (!hexKeyPattern.test(normalized)) {
+        throw new Error(`${name} must be a 32-byte hex key`);
+    }
+    return normalized;
+}
+export function generateNwcClientIdentity() {
+    const secretBytes = generateSecretKey();
+    return {
+        secret: bytesToHex(secretBytes),
+        publicKey: getPublicKey(secretBytes),
+    };
+}
+export function buildNwcUri(params) {
+    const walletPubkey = requireHexKey(params.walletPubkey, "Wallet pubkey");
+    const secret = requireHexKey(params.secret, "Client secret");
+    const relayUrl = params.relayUrl.trim();
+    if (!relayUrl)
+        throw new Error("Relay URL is required");
+    const query = new URLSearchParams({ relay: relayUrl, secret });
+    if (params.lud16?.trim())
+        query.set("lud16", params.lud16.trim());
+    return `nostr+walletconnect://${walletPubkey}?${query.toString()}`;
+}
 export function parseNwcUri(uri) {
     if (!uri.startsWith("nostr+walletconnect://") && !uri.startsWith("nostr+walletconnect:")) {
         throw new Error("Invalid NWC URI");
@@ -17,9 +47,9 @@ export function parseNwcUri(uri) {
     if (!secret)
         throw new Error("Missing secret parameter");
     return {
-        walletPubkey,
+        walletPubkey: requireHexKey(walletPubkey, "Wallet pubkey"),
         relayUrl: decodeURIComponent(relayUrl),
-        secret,
+        secret: requireHexKey(secret, "Client secret"),
         lud16,
     };
 }

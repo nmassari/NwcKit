@@ -11,6 +11,9 @@ No custody. No wallet switching. No node management in your frontend.
 
 > Think: a Nostr-native wallet action layer for Bitcoin apps.
 
+NwcKit can also generate the NWC client identity in the browser. A provider only
+needs the resulting public key; the client secret can remain on the user's device.
+
 **Try the live wallet demo:** [EasyCryptoSend](https://easycryptosend.it)
 
 ---
@@ -58,6 +61,24 @@ if (await client.supportsSwaps()) {
 }
 
 await client.disconnect();
+```
+
+### Client-owned connection secret
+
+```ts
+import { buildNwcUri, generateNwcClientIdentity } from "nwckit";
+
+const identity = generateNwcClientIdentity();
+
+// Send only identity.publicKey to the wallet provisioning service.
+const provisioned = await provisionWallet(identity.publicKey);
+
+// Build the bearer credential locally. The provider never receives the secret.
+const nwcUri = buildNwcUri({
+  walletPubkey: provisioned.walletPubkey,
+  relayUrl: provisioned.relayUrl,
+  secret: identity.secret,
+});
 ```
 
 ---
