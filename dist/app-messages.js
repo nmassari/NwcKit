@@ -1,4 +1,4 @@
-import { SimplePool, finalizeEvent, getPublicKey, } from "nostr-tools";
+import { SimplePool, finalizeEvent, getPublicKey, nip59, } from "nostr-tools";
 import { decryptContent, encryptContent } from "./crypto.js";
 import { ECS_APP_MESSAGE_KIND, ECS_APP_MESSAGE_PROTOCOL, ECS_APP_MESSAGE_VERSION, } from "./types.js";
 export class NostrPaymentMessages {
@@ -7,6 +7,8 @@ export class NostrPaymentMessages {
     relays;
     timeoutMs;
     debug;
+    transport;
+    acceptLegacy;
     pool;
     messageHandlers = new Set();
     errorHandlers = new Set();
@@ -22,6 +24,8 @@ export class NostrPaymentMessages {
         this.relays = options.relays;
         this.timeoutMs = options.timeoutMs ?? 15000;
         this.debug = options.debug ?? false;
+        this.transport = options.transport ?? "legacy";
+        this.acceptLegacy = options.acceptLegacy ?? true;
         this.pool = new SimplePool();
     }
     get pubkey() {
@@ -30,7 +34,12 @@ export class NostrPaymentMessages {
     subscribe() {
         this.subscription?.close();
         this.subscription = this.pool.subscribeMany(this.relays, {
-            kinds: [ECS_APP_MESSAGE_KIND],
+            kinds: [
+                1059,
+                ...(this.transport === "legacy" || this.acceptLegacy
+                    ? [ECS_APP_MESSAGE_KIND]
+                    : []),
+            ],
             "#p": [this.publicKey],
         }, {
             onevent: async (event) => {
@@ -61,22 +70,34 @@ export class NostrPaymentMessages {
             createdAt: params.createdAt ?? new Date().toISOString(),
             payload: params.payload,
         };
-        const encrypted = await encryptContent(JSON.stringify(envelope), this.privateKey, params.recipientPubkey);
-        const unsignedEvent = {
-            kind: ECS_APP_MESSAGE_KIND,
-            created_at: nowSeconds(),
-            content: encrypted,
-            tags: [
-                ["p", params.recipientPubkey],
-                ["type", params.type],
-                ["protocol", ECS_APP_MESSAGE_PROTOCOL],
-                ["version", ECS_APP_MESSAGE_VERSION],
-                ...(await subscriptionTags(params.type, params.payload)),
-                ...(params.tags ?? []),
-            ],
-            pubkey: this.publicKey,
-        };
-        const signedEvent = finalizeEvent(unsignedEvent, hexToBytes(this.privateKey));
+        const messageTags = [
+            ["p", params.recipientPubkey],
+            ["type", params.type],
+            ["protocol", ECS_APP_MESSAGE_PROTOCOL],
+            ["version", ECS_APP_MESSAGE_VERSION],
+            ...(await subscriptionTags(params.type, params.payload)),
+            ...(params.tags ?? []),
+        ];
+        let signedEvent;
+        if (this.transport === "giftwrap") {
+            signedEvent = nip59.wrapEvent({
+                kind: ECS_APP_MESSAGE_KIND,
+                created_at: nowSeconds(),
+                content: JSON.stringify(envelope),
+                tags: [["d", envelope.messageId], ...messageTags],
+            }, hexToBytes(this.privateKey), params.recipientPubkey);
+        }
+        else {
+            const encrypted = await encryptContent(JSON.stringify(envelope), this.privateKey, params.recipientPubkey);
+            const unsignedEvent = {
+                kind: ECS_APP_MESSAGE_KIND,
+                created_at: nowSeconds(),
+                content: encrypted,
+                tags: messageTags,
+                pubkey: this.publicKey,
+            };
+            signedEvent = finalizeEvent(unsignedEvent, hexToBytes(this.privateKey));
+        }
         const published = this.pool.publish(this.relays, signedEvent);
         await withTimeout(Promise.all(published), this.timeoutMs, "publish app message");
         return signedEvent;
@@ -86,14 +107,19 @@ export class NostrPaymentMessages {
             return;
         this.seenEventIds.add(event.id);
         try {
-            const plaintext = await decryptContent(event.content, this.privateKey, event.pubkey);
+            const messageEvent = event.kind === 1059
+                ? nip59.unwrapEvent(event, hexToBytes(this.privateKey))
+                : event;
+            const plaintext = event.kind === 1059
+                ? messageEvent.content
+                : await decryptContent(event.content, this.privateKey, event.pubkey);
             const envelope = JSON.parse(plaintext);
             validateEnvelope(envelope);
             const message = {
                 ...envelope,
-                eventId: event.id,
-                senderPubkey: event.pubkey,
-                recipientPubkey: getTagValue(event.tags, "p"),
+                eventId: messageEvent.id,
+                senderPubkey: messageEvent.pubkey,
+                recipientPubkey: getTagValue(messageEvent.tags, "p"),
                 receivedAt: new Date().toISOString(),
             };
             for (const handler of this.messageHandlers) {

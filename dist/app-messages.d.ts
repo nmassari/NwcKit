@@ -8,6 +8,8 @@ export declare class NostrPaymentMessages {
     private readonly relays;
     private readonly timeoutMs;
     private readonly debug;
+    private readonly transport;
+    private readonly acceptLegacy;
     private readonly pool;
     private readonly messageHandlers;
     private readonly errorHandlers;

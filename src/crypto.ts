@@ -1,9 +1,8 @@
-import { nip04 } from "nostr-tools";
+import { nip04, nip44 } from "nostr-tools";
 
 /**
- * Current encryption mode actually implemented.
- * For now we use NIP-04 to keep the first working version simple.
- * NIP-44 can be added later without changing the client public API too much.
+ * Encryption modes supported by NWC. NIP-44 v2 is preferred whenever the
+ * wallet advertises it; NIP-04 remains available for legacy wallets.
  */
 export type NwcEncryptionMode = "nip04" | "nip44_v2";
 
@@ -57,8 +56,15 @@ export async function encryptContentWithMode(
     case "nip04":
       return encryptContent(plaintext, secret, pubkey);
 
-    case "nip44_v2":
-      throw new Error("NIP-44 encryption not implemented yet");
+    case "nip44_v2": {
+      validateHexKey(secret, "Invalid client secret");
+      validateHexKey(pubkey, "Invalid wallet pubkey");
+      const conversationKey = nip44.v2.utils.getConversationKey(
+        hexToBytes(secret),
+        pubkey
+      );
+      return nip44.v2.encrypt(plaintext, conversationKey);
+    }
 
     default:
       throw new Error(`Unsupported encryption mode: ${mode}`);
@@ -79,8 +85,15 @@ export async function decryptContentWithMode(
     case "nip04":
       return decryptContent(ciphertext, secret, pubkey);
 
-    case "nip44_v2":
-      throw new Error("NIP-44 decryption not implemented yet");
+    case "nip44_v2": {
+      validateHexKey(secret, "Invalid client secret");
+      validateHexKey(pubkey, "Invalid wallet pubkey");
+      const conversationKey = nip44.v2.utils.getConversationKey(
+        hexToBytes(secret),
+        pubkey
+      );
+      return nip44.v2.decrypt(ciphertext, conversationKey);
+    }
 
     default:
       throw new Error(`Unsupported encryption mode: ${mode}`);
@@ -91,4 +104,12 @@ function validateHexKey(value: string, message: string): void {
   if (!value || !/^[0-9a-fA-F]{64}$/.test(value)) {
     throw new Error(message);
   }
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let index = 0; index < hex.length; index += 2) {
+    bytes[index / 2] = Number.parseInt(hex.slice(index, index + 2), 16);
+  }
+  return bytes;
 }

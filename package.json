@@ -1,6 +1,6 @@
 {
   "name": "nwckit",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "Browser-first TypeScript toolkit for Nostr Wallet Connect, Lightning payments and NWC-based Bitcoin swap flows",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,7 +11,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "npm run build && node --test test/*.test.mjs"
   },
   "keywords": [
     "nostr",

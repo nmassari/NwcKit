@@ -1,7 +1,6 @@
 /**
- * Current encryption mode actually implemented.
- * For now we use NIP-04 to keep the first working version simple.
- * NIP-44 can be added later without changing the client public API too much.
+ * Encryption modes supported by NWC. NIP-44 v2 is preferred whenever the
+ * wallet advertises it; NIP-04 remains available for legacy wallets.
  */
 export type NwcEncryptionMode = "nip04" | "nip44_v2";
 /**

@@ -75,6 +75,8 @@ export declare class NwcKit {
     private readonly clientPubkey;
     private readonly debug;
     private readonly onConnectionStateChange?;
+    private encryptionMode;
+    private encryptionWasAdvertised;
     private connected;
     private connectingPromise;
     private destroyed;
@@ -112,6 +114,7 @@ export declare class NwcKit {
     private startResponseSubscription;
     private handleResponseEvent;
     private assertConnected;
+    private configureEncryptionFromInfoEvent;
     private assertAlive;
     private log;
 }

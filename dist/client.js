@@ -1,5 +1,5 @@
 import { SimplePool, finalizeEvent, getPublicKey, } from "nostr-tools";
-import { encryptContent, decryptContent } from "./crypto.js";
+import { decryptContentWithMode, encryptContentWithMode, } from "./crypto.js";
 import { btcMainnetLightning, btcMainnetOnchain } from "./assets.js";
 // ---- NWC protocol kinds ----
 const NWC_INFO_KIND = 13194;
@@ -23,6 +23,8 @@ export class NwcKit {
     clientPubkey;
     debug;
     onConnectionStateChange;
+    encryptionMode = "nip04";
+    encryptionWasAdvertised = false;
     connected = false;
     connectingPromise = null;
     destroyed = false;
@@ -80,6 +82,7 @@ export class NwcKit {
             }), this.timeoutMs, "get_info");
             if (event) {
                 this.log("NWC info event:", event);
+                this.configureEncryptionFromInfoEvent(event);
                 return parseWalletInfoEvent(event.content, normalizeTags(event.tags));
             }
             this.log("NWC info event not found; falling back to encrypted get_info request.");
@@ -257,12 +260,17 @@ export class NwcKit {
             ? { method, params }
             : { method };
         const plaintext = JSON.stringify(requestBody);
-        const encrypted = await encryptContent(plaintext, this.clientSecret, this.connection.walletPubkey);
+        const encrypted = await encryptContentWithMode(this.encryptionMode, plaintext, this.clientSecret, this.connection.walletPubkey);
         const unsignedEvent = {
             kind: NWC_REQUEST_KIND,
             created_at: nowSeconds(),
             content: encrypted,
-            tags: [["p", this.connection.walletPubkey]],
+            tags: [
+                ["p", this.connection.walletPubkey],
+                ...(this.encryptionWasAdvertised
+                    ? [["encryption", this.encryptionMode]]
+                    : []),
+            ],
             pubkey: this.clientPubkey,
         };
         const signedEvent = finalizeEvent(unsignedEvent, hexToBytes(this.clientSecret));
@@ -350,7 +358,10 @@ export class NwcKit {
                     authors: [this.connection.walletPubkey],
                     limit: 1,
                 }, {
-                    onevent: () => finishOk(),
+                    onevent: (event) => {
+                        this.configureEncryptionFromInfoEvent(event);
+                        finishOk();
+                    },
                     oneose: () => finishOk(),
                 });
             }
@@ -377,7 +388,9 @@ export class NwcKit {
         this.log("NWC response event:", event);
         let plaintext;
         try {
-            plaintext = await decryptContent(event.content, this.clientSecret, this.connection.walletPubkey);
+            const tags = normalizeTags(event.tags);
+            const responseMode = parseEncryptionMode(getSingleTagValue(tags, "encryption")) ?? this.encryptionMode;
+            plaintext = await decryptContentWithMode(responseMode, event.content, this.clientSecret, this.connection.walletPubkey);
         }
         catch (err) {
             this.log("decrypt failed:", err);
@@ -411,6 +424,24 @@ export class NwcKit {
         if (!this.connected) {
             throw new NwcError("NOT_CONNECTED", "NwcKit is not connected. Call connect() first.");
         }
+    }
+    configureEncryptionFromInfoEvent(event) {
+        const tags = normalizeTags(event.tags);
+        const encryptionTag = getSingleTagValue(tags, "encryption");
+        if (!encryptionTag) {
+            this.encryptionMode = "nip04";
+            this.encryptionWasAdvertised = false;
+            return;
+        }
+        const advertised = parseEncryptionModes(encryptionTag);
+        if (!advertised.length) {
+            throw new NwcError("UNSUPPORTED_ENCRYPTION", `Wallet advertised no supported encryption mode: ${encryptionTag}`);
+        }
+        this.encryptionWasAdvertised = true;
+        this.encryptionMode = advertised.includes("nip44_v2")
+            ? "nip44_v2"
+            : "nip04";
+        this.log("NWC encryption mode:", this.encryptionMode);
     }
     assertAlive() {
         if (this.destroyed) {
@@ -541,6 +572,8 @@ function parseWalletInfoEvent(content, tags) {
     const color = getSingleTagValue(tags, "color");
     const network = getSingleTagValue(tags, "network");
     const blockHeightRaw = getSingleTagValue(tags, "block_height");
+    const encryption = parseEncryptionModes(getSingleTagValue(tags, "encryption"));
+    const extensions = splitTagValues(getSingleTagValue(tags, "extensions"));
     const blockHeight = blockHeightRaw !== undefined && blockHeightRaw !== ""
         ? Number(blockHeightRaw)
         : undefined;
@@ -553,7 +586,20 @@ function parseWalletInfoEvent(content, tags) {
             ? blockHeight
             : undefined,
         methods,
+        encryption: encryption.length ? encryption : undefined,
+        extensions: extensions.length ? extensions : undefined,
     };
+}
+function parseEncryptionModes(value) {
+    return splitTagValues(value)
+        .map(parseEncryptionMode)
+        .filter((mode) => mode !== undefined);
+}
+function parseEncryptionMode(value) {
+    return value === "nip44_v2" || value === "nip04" ? value : undefined;
+}
+function splitTagValues(value) {
+    return value?.trim().split(/\s+/).filter(Boolean) ?? [];
 }
 function getSingleTagValue(tags, tagName) {
     const tag = tags.find((t) => t[0] === tagName);

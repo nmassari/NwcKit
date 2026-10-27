@@ -7,7 +7,11 @@ import {
   type UnsignedEvent,
 } from "nostr-tools";
 
-import { encryptContent, decryptContent } from "./crypto.js";
+import {
+  decryptContentWithMode,
+  encryptContentWithMode,
+  type NwcEncryptionMode,
+} from "./crypto.js";
 import { btcMainnetLightning, btcMainnetOnchain } from "./assets.js";
 
 import type {
@@ -148,6 +152,8 @@ export class NwcKit {
   private readonly clientPubkey: string;
   private readonly debug: boolean;
   private readonly onConnectionStateChange?: NwcKitOptions["onConnectionStateChange"];
+  private encryptionMode: NwcEncryptionMode = "nip04";
+  private encryptionWasAdvertised = false;
 
   private connected = false;
   private connectingPromise: Promise<void> | null = null;
@@ -227,6 +233,7 @@ export class NwcKit {
 
       if (event) {
         this.log("NWC info event:", event);
+        this.configureEncryptionFromInfoEvent(event);
 
         return parseWalletInfoEvent(event.content, normalizeTags(event.tags));
       }
@@ -474,7 +481,8 @@ export class NwcKit {
 
     const plaintext = JSON.stringify(requestBody);
 
-    const encrypted = await encryptContent(
+    const encrypted = await encryptContentWithMode(
+      this.encryptionMode,
       plaintext,
       this.clientSecret,
       this.connection.walletPubkey
@@ -484,7 +492,12 @@ export class NwcKit {
       kind: NWC_REQUEST_KIND,
       created_at: nowSeconds(),
       content: encrypted,
-      tags: [["p", this.connection.walletPubkey]],
+      tags: [
+        ["p", this.connection.walletPubkey],
+        ...(this.encryptionWasAdvertised
+          ? [["encryption", this.encryptionMode]]
+          : []),
+      ],
       pubkey: this.clientPubkey,
     };
 
@@ -607,7 +620,10 @@ export class NwcKit {
             limit: 1,
           },
           {
-            onevent: () => finishOk(),
+            onevent: (event) => {
+              this.configureEncryptionFromInfoEvent(event);
+              finishOk();
+            },
             oneose: () => finishOk(),
           }
         );
@@ -642,7 +658,12 @@ export class NwcKit {
 
     let plaintext: string;
     try {
-      plaintext = await decryptContent(
+      const tags = normalizeTags(event.tags);
+      const responseMode = parseEncryptionMode(
+        getSingleTagValue(tags, "encryption")
+      ) ?? this.encryptionMode;
+      plaintext = await decryptContentWithMode(
+        responseMode,
         event.content,
         this.clientSecret,
         this.connection.walletPubkey
@@ -685,6 +706,30 @@ export class NwcKit {
         "NwcKit is not connected. Call connect() first."
       );
     }
+  }
+
+  private configureEncryptionFromInfoEvent(event: Event): void {
+    const tags = normalizeTags(event.tags);
+    const encryptionTag = getSingleTagValue(tags, "encryption");
+    if (!encryptionTag) {
+      this.encryptionMode = "nip04";
+      this.encryptionWasAdvertised = false;
+      return;
+    }
+
+    const advertised = parseEncryptionModes(encryptionTag);
+    if (!advertised.length) {
+      throw new NwcError(
+        "UNSUPPORTED_ENCRYPTION",
+        `Wallet advertised no supported encryption mode: ${encryptionTag}`
+      );
+    }
+
+    this.encryptionWasAdvertised = true;
+    this.encryptionMode = advertised.includes("nip44_v2")
+      ? "nip44_v2"
+      : "nip04";
+    this.log("NWC encryption mode:", this.encryptionMode);
   }
 
   private assertAlive(): void {
@@ -860,6 +905,10 @@ function parseWalletInfoEvent(
   const color = getSingleTagValue(tags, "color");
   const network = getSingleTagValue(tags, "network");
   const blockHeightRaw = getSingleTagValue(tags, "block_height");
+  const encryption = parseEncryptionModes(
+    getSingleTagValue(tags, "encryption")
+  );
+  const extensions = splitTagValues(getSingleTagValue(tags, "extensions"));
 
   const blockHeight =
     blockHeightRaw !== undefined && blockHeightRaw !== ""
@@ -876,7 +925,23 @@ function parseWalletInfoEvent(
         ? blockHeight
         : undefined,
     methods,
+    encryption: encryption.length ? encryption : undefined,
+    extensions: extensions.length ? extensions : undefined,
   };
+}
+
+function parseEncryptionModes(value: string | undefined): NwcEncryptionMode[] {
+  return splitTagValues(value)
+    .map(parseEncryptionMode)
+    .filter((mode): mode is NwcEncryptionMode => mode !== undefined);
+}
+
+function parseEncryptionMode(value: string | undefined): NwcEncryptionMode | undefined {
+  return value === "nip44_v2" || value === "nip04" ? value : undefined;
+}
+
+function splitTagValues(value: string | undefined): string[] {
+  return value?.trim().split(/\s+/).filter(Boolean) ?? [];
 }
 
 function getSingleTagValue(

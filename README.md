@@ -141,6 +141,7 @@ This keeps the app non-custodial while still giving it a compact API for Lightni
 * NWC URI validation helper
 * Relay connection handling
 * Encrypted request/response flow
+* Automatic NIP-44 v2 negotiation with NIP-04 fallback for legacy wallets
 * Browser-first TypeScript API
 * Standard NWC Lightning methods
 * Experimental NWC Taproot Asset Lightning methods
@@ -181,7 +182,7 @@ Notes:
 * API surface may change before v1
 * Swap methods require a compatible wallet service
 * Cross-wallet compatibility is still being expanded
-* NIP-04 compatible encryption is currently used
+* NIP-44 v2 is preferred when advertised by the wallet; NIP-04 remains available for legacy wallets
 
 ---
 
@@ -331,6 +332,23 @@ await messages.send({
   },
 });
 ```
+
+The legacy `kind 31947` transport remains the default throughout the `0.1.x`
+line. Applications that control both peers can opt in to NIP-59 gift wrapping:
+
+```ts
+const messages = new NostrPaymentMessages({
+  privateKey: "customer_private_key_hex",
+  relays: ["wss://relay.example.com"],
+  transport: "giftwrap",
+  acceptLegacy: true,
+});
+```
+
+Gift-wrapped messages use persistent `kind 1059` envelopes and NIP-44 v2.
+Receivers accept the legacy format by default during migration. Existing
+applications therefore keep their current wire behavior unless they explicitly
+select `giftwrap`.
 
 When an invoice response arrives, validate it before paying:
 
@@ -570,7 +588,7 @@ This keeps app code ergonomic while matching NWC wallet expectations internally.
 ## Roadmap
 
 * Improve cross-wallet compatibility
-* Add NIP-44 encryption support
+* Complete ecosystem-wide NIP-44 rollout and retire NIP-04 after a documented migration window
 * Add multi-relay support and fallback
 * Harden swap-status recovery flows
 * Add optional UI helpers for common wallet flows

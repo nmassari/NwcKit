@@ -30,6 +30,8 @@ export interface NwcWalletInfo {
   network?: string;
   block_height?: number;
   methods?: string[];
+  encryption?: Array<"nip04" | "nip44_v2">;
+  extensions?: string[];
 }
 
 export interface NwcCapabilities {
@@ -482,6 +484,13 @@ export interface EcsAppMessageOptions {
   relays: string[];
   timeoutMs?: number;
   debug?: boolean;
+  /**
+   * Outbound message transport. `legacy` preserves the 0.1.x NIP-04 event
+   * format. `giftwrap` uses NIP-59 with NIP-44 and is opt-in during migration.
+   */
+  transport?: "legacy" | "giftwrap";
+  /** Receive legacy kind 31947 messages while using gift wrap. Default true. */
+  acceptLegacy?: boolean;
 }
 
 export interface SendEcsAppMessageParams<TPayload = unknown> {

@@ -2,6 +2,7 @@ import {
   SimplePool,
   finalizeEvent,
   getPublicKey,
+  nip59,
   type Event,
   type EventTemplate,
   type UnsignedEvent,
@@ -31,6 +32,8 @@ export class NostrPaymentMessages {
   private readonly relays: string[];
   private readonly timeoutMs: number;
   private readonly debug: boolean;
+  private readonly transport: "legacy" | "giftwrap";
+  private readonly acceptLegacy: boolean;
   private readonly pool: SimplePool;
   private readonly messageHandlers = new Set<MessageHandler>();
   private readonly errorHandlers = new Set<ErrorHandler>();
@@ -49,6 +52,8 @@ export class NostrPaymentMessages {
     this.relays = options.relays;
     this.timeoutMs = options.timeoutMs ?? 15000;
     this.debug = options.debug ?? false;
+    this.transport = options.transport ?? "legacy";
+    this.acceptLegacy = options.acceptLegacy ?? true;
     this.pool = new SimplePool();
   }
 
@@ -62,7 +67,12 @@ export class NostrPaymentMessages {
     this.subscription = this.pool.subscribeMany(
       this.relays,
       {
-        kinds: [ECS_APP_MESSAGE_KIND],
+        kinds: [
+          1059,
+          ...(this.transport === "legacy" || this.acceptLegacy
+            ? [ECS_APP_MESSAGE_KIND]
+            : []),
+        ],
         "#p": [this.publicKey],
       } as any,
       {
@@ -103,31 +113,45 @@ export class NostrPaymentMessages {
       payload: params.payload,
     };
 
-    const encrypted = await encryptContent(
-      JSON.stringify(envelope),
-      this.privateKey,
-      params.recipientPubkey
-    );
+    const messageTags = [
+      ["p", params.recipientPubkey],
+      ["type", params.type],
+      ["protocol", ECS_APP_MESSAGE_PROTOCOL],
+      ["version", ECS_APP_MESSAGE_VERSION],
+      ...(await subscriptionTags(params.type, params.payload)),
+      ...(params.tags ?? []),
+    ];
 
-    const unsignedEvent: UnsignedEvent = {
-      kind: ECS_APP_MESSAGE_KIND,
-      created_at: nowSeconds(),
-      content: encrypted,
-      tags: [
-        ["p", params.recipientPubkey],
-        ["type", params.type],
-        ["protocol", ECS_APP_MESSAGE_PROTOCOL],
-        ["version", ECS_APP_MESSAGE_VERSION],
-        ...(await subscriptionTags(params.type, params.payload)),
-        ...(params.tags ?? []),
-      ],
-      pubkey: this.publicKey,
-    };
-
-    const signedEvent = finalizeEvent(
-      unsignedEvent as EventTemplate,
-      hexToBytes(this.privateKey)
-    );
+    let signedEvent: Event;
+    if (this.transport === "giftwrap") {
+      signedEvent = nip59.wrapEvent(
+        {
+          kind: ECS_APP_MESSAGE_KIND,
+          created_at: nowSeconds(),
+          content: JSON.stringify(envelope),
+          tags: [["d", envelope.messageId], ...messageTags],
+        },
+        hexToBytes(this.privateKey),
+        params.recipientPubkey
+      ) as Event;
+    } else {
+      const encrypted = await encryptContent(
+        JSON.stringify(envelope),
+        this.privateKey,
+        params.recipientPubkey
+      );
+      const unsignedEvent: UnsignedEvent = {
+        kind: ECS_APP_MESSAGE_KIND,
+        created_at: nowSeconds(),
+        content: encrypted,
+        tags: messageTags,
+        pubkey: this.publicKey,
+      };
+      signedEvent = finalizeEvent(
+        unsignedEvent as EventTemplate,
+        hexToBytes(this.privateKey)
+      ) as Event;
+    }
 
     const published = this.pool.publish(this.relays, signedEvent);
     await withTimeout(Promise.all(published), this.timeoutMs, "publish app message");
@@ -140,20 +164,25 @@ export class NostrPaymentMessages {
     this.seenEventIds.add(event.id);
 
     try {
-      const plaintext = await decryptContent(
-        event.content,
-        this.privateKey,
-        event.pubkey
-      );
+      const messageEvent = event.kind === 1059
+        ? nip59.unwrapEvent(event, hexToBytes(this.privateKey))
+        : event;
+      const plaintext = event.kind === 1059
+        ? messageEvent.content
+        : await decryptContent(
+            event.content,
+            this.privateKey,
+            event.pubkey
+          );
 
       const envelope = JSON.parse(plaintext) as EcsAppMessageEnvelope;
       validateEnvelope(envelope);
 
       const message: EcsAppMessage = {
         ...envelope,
-        eventId: event.id,
-        senderPubkey: event.pubkey,
-        recipientPubkey: getTagValue(event.tags, "p"),
+        eventId: messageEvent.id,
+        senderPubkey: messageEvent.pubkey,
+        recipientPubkey: getTagValue(messageEvent.tags, "p"),
         receivedAt: new Date().toISOString(),
       };
 

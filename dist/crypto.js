@@ -1,4 +1,4 @@
-import { nip04 } from "nostr-tools";
+import { nip04, nip44 } from "nostr-tools";
 /**
  * Encrypts a plaintext payload for the wallet pubkey using the client secret.
  *
@@ -31,8 +31,12 @@ export async function encryptContentWithMode(mode, plaintext, secret, pubkey) {
     switch (mode) {
         case "nip04":
             return encryptContent(plaintext, secret, pubkey);
-        case "nip44_v2":
-            throw new Error("NIP-44 encryption not implemented yet");
+        case "nip44_v2": {
+            validateHexKey(secret, "Invalid client secret");
+            validateHexKey(pubkey, "Invalid wallet pubkey");
+            const conversationKey = nip44.v2.utils.getConversationKey(hexToBytes(secret), pubkey);
+            return nip44.v2.encrypt(plaintext, conversationKey);
+        }
         default:
             throw new Error(`Unsupported encryption mode: ${mode}`);
     }
@@ -45,8 +49,12 @@ export async function decryptContentWithMode(mode, ciphertext, secret, pubkey) {
     switch (mode) {
         case "nip04":
             return decryptContent(ciphertext, secret, pubkey);
-        case "nip44_v2":
-            throw new Error("NIP-44 decryption not implemented yet");
+        case "nip44_v2": {
+            validateHexKey(secret, "Invalid client secret");
+            validateHexKey(pubkey, "Invalid wallet pubkey");
+            const conversationKey = nip44.v2.utils.getConversationKey(hexToBytes(secret), pubkey);
+            return nip44.v2.decrypt(ciphertext, conversationKey);
+        }
         default:
             throw new Error(`Unsupported encryption mode: ${mode}`);
     }
@@ -55,4 +63,11 @@ function validateHexKey(value, message) {
     if (!value || !/^[0-9a-fA-F]{64}$/.test(value)) {
         throw new Error(message);
     }
+}
+function hexToBytes(hex) {
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let index = 0; index < hex.length; index += 2) {
+        bytes[index / 2] = Number.parseInt(hex.slice(index, index + 2), 16);
+    }
+    return bytes;
 }
