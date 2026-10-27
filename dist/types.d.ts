@@ -17,6 +17,7 @@ export interface BuildNwcUriParams {
 export interface NwcKitOptions {
     connection: NwcConnection;
     timeoutMs?: number;
+    onConnectionStateChange?: (state: "connecting" | "connected" | "degraded" | "disconnected", detail?: string) => void;
 }
 export interface NwcWalletInfo {
     alias?: string;
@@ -202,6 +203,7 @@ export interface SwapAmount {
     unit: SwapAmountUnit;
 }
 export interface CreateSwapParams {
+    requestId?: string;
     direction: SwapDirection;
     sendAsset: SwapAsset;
     receiveAsset: SwapAsset;
@@ -210,6 +212,7 @@ export interface CreateSwapParams {
     receiveAddress?: string;
 }
 export interface CreateSwapRequestParams {
+    request_id: string;
     direction: SwapDirection;
     send_asset: SwapAsset;
     receive_asset: SwapAsset;

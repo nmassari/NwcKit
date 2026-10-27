@@ -74,6 +74,7 @@ export declare class NwcKit {
     private readonly clientSecret;
     private readonly clientPubkey;
     private readonly debug;
+    private readonly onConnectionStateChange?;
     private connected;
     private connectingPromise;
     private destroyed;
@@ -106,6 +107,7 @@ export declare class NwcKit {
     refreshSwapStatus(params: SwapStatusParams): Promise<RefreshSwapStatusResponse>;
     request<TMethod extends NwcMethod>(method: TMethod, params: NwcMethodMap[TMethod]["params"]): Promise<NwcMethodMap[TMethod]["result"]>;
     destroy(): void;
+    private notifyConnectionState;
     private openRelayConnection;
     private startResponseSubscription;
     private handleResponseEvent;

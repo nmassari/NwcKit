@@ -220,6 +220,9 @@ const client = new NwcKit({
   connection,
   timeoutMs: 15000,
   debug: false,
+  onConnectionStateChange: (state, detail) => {
+    console.log("NWC connection:", state, detail ?? "");
+  },
 });
 
 await client.connect();
@@ -395,6 +398,10 @@ if (!isNwcUri(input)) {
   connection: NwcConnection;
   timeoutMs?: number;
   debug?: boolean;
+  onConnectionStateChange?: (
+    state: "connecting" | "connected" | "degraded" | "disconnected",
+    detail?: string
+  ) => void;
 }
 ```
 
@@ -491,6 +498,8 @@ import {
 } from "nwckit";
 
 const onchainToLightning = await client.createSwap({
+  // Keep the same ID when retrying the same user action.
+  requestId: crypto.randomUUID().replaceAll("-", ""),
   direction: "onchain_to_lightning",
   sendAsset: BTC_MAINNET_ONCHAIN,
   receiveAsset: BTC_MAINNET_LIGHTNING,

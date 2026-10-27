@@ -147,6 +147,7 @@ export class NwcKit {
   private readonly clientSecret: string;
   private readonly clientPubkey: string;
   private readonly debug: boolean;
+  private readonly onConnectionStateChange?: NwcKitOptions["onConnectionStateChange"];
 
   private connected = false;
   private connectingPromise: Promise<void> | null = null;
@@ -164,6 +165,7 @@ export class NwcKit {
     this.clientSecret = this.connection.secret;
     this.clientPubkey = getPublicKey(hexToBytes(this.clientSecret));
     this.debug = options.debug ?? false;
+    this.onConnectionStateChange = options.onConnectionStateChange;
 
     this.log("clientPubkey:", this.clientPubkey);
   }
@@ -174,12 +176,14 @@ export class NwcKit {
     if (this.connected) return;
     if (this.connectingPromise) return this.connectingPromise;
 
+    this.notifyConnectionState("connecting");
     this.connectingPromise = this.openRelayConnection();
 
     try {
       await this.connectingPromise;
       this.startResponseSubscription();
       this.connected = true;
+      this.notifyConnectionState("connected");
     } finally {
       this.connectingPromise = null;
     }
@@ -203,6 +207,7 @@ export class NwcKit {
     this.pending.clear();
     this.pool.close([this.connection.relayUrl]);
     this.connected = false;
+    this.notifyConnectionState("disconnected");
     this.connectingPromise = null;
   }
 
@@ -423,6 +428,7 @@ export class NwcKit {
     }
 
     return this.request("create_swap", {
+      request_id: params.requestId?.trim() || crypto.randomUUID().replaceAll("-", ""),
       direction: params.direction,
       send_asset: params.sendAsset,
       receive_asset: params.receiveAsset,
@@ -492,6 +498,7 @@ export class NwcKit {
     const responsePromise = new Promise<NwcResponse>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(signedEvent.id);
+        this.notifyConnectionState("degraded", `${method} timed out`);
         reject(
           new NwcError(
             "TIMEOUT",
@@ -513,12 +520,14 @@ export class NwcKit {
     for (const pub of pubs as any[]) {
       pub.on?.("ok", () => this.log("relay publish ok"));
       pub.on?.("seen", () => this.log("relay publish seen"));
-      pub.on?.("failed", (reason: string) =>
-        this.log("relay publish failed:", reason)
-      );
+      pub.on?.("failed", (reason: string) => {
+        this.log("relay publish failed:", reason);
+        this.notifyConnectionState("degraded", reason);
+      });
     }
 
     const envelope = await responsePromise;
+    this.notifyConnectionState("connected");
 
     if (envelope.error) {
       throw new NwcError(
@@ -541,6 +550,15 @@ export class NwcKit {
     this.connected = false;
     this.connectingPromise = null;
     this.pending.clear();
+    this.notifyConnectionState("disconnected");
+  }
+
+  private notifyConnectionState(
+    state: "connecting" | "connected" | "degraded" | "disconnected",
+    detail?: string
+  ): void {
+    try { this.onConnectionStateChange?.(state, detail); }
+    catch (error) { this.log("connection state callback failed", error); }
   }
 
   private async openRelayConnection(): Promise<void> {

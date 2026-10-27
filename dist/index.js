@@ -4,3 +4,4 @@ export * from "./assets.js";
 export * from "./crypto.js";
 export * from "./client.js";
 export * from "./app-messages.js";
+export * from "./subscription-offers.js";
