@@ -1,4 +1,4 @@
-import type { NwcKitOptions, NwcWalletInfo, NwcCapabilities, MakeInvoiceParams, PayInvoiceParams, MakeTaprootAssetInvoiceParams, PayTaprootAssetInvoiceParams, LookupInvoiceParams, ListTransactionsParams, CreateSwapParams, CreateSwapRequestParams, CreateSwapResponse, CreateOnchainToLightningSwapParams, CreateLightningToOnchainSwapParams, SwapStatusParams, NwcBalanceResponse, NwcAssetBalancesResponse, MakeInvoiceResponse, PayInvoiceResponse, MakeTaprootAssetInvoiceResponse, PayTaprootAssetInvoiceResponse, InvoiceLookupResponse, ListTransactionsResponse, OnchainToLightningSwapResponse, LightningToOnchainSwapResponse, SwapOperationStatusResponse, RefreshSwapStatusResponse } from "./types.js";
+import type { NwcKitOptions, NwcWalletInfo, NwcCapabilities, MakeInvoiceParams, PayInvoiceParams, PaySubscriptionInvoiceParams, MakeTaprootAssetInvoiceParams, PayTaprootAssetInvoiceParams, LookupInvoiceParams, ListTransactionsParams, CreateSwapParams, CreateSwapRequestParams, CreateSwapResponse, CreateOnchainToLightningSwapParams, CreateLightningToOnchainSwapParams, SwapStatusParams, NwcBalanceResponse, NwcAssetBalancesResponse, MakeInvoiceResponse, PayInvoiceResponse, PaySubscriptionInvoiceResponse, MakeTaprootAssetInvoiceResponse, PayTaprootAssetInvoiceResponse, InvoiceLookupResponse, ListTransactionsResponse, OnchainToLightningSwapResponse, LightningToOnchainSwapResponse, SwapOperationStatusResponse, RefreshSwapStatusResponse } from "./types.js";
 type NwcMethodMap = {
     get_info: {
         params: Record<string, never>;
@@ -19,6 +19,10 @@ type NwcMethodMap = {
     pay_invoice: {
         params: PayInvoiceParams;
         result: PayInvoiceResponse;
+    };
+    pay_subscription_invoice: {
+        params: PaySubscriptionInvoiceParams;
+        result: PaySubscriptionInvoiceResponse;
     };
     make_taproot_asset_invoice: {
         params: MakeTaprootAssetInvoiceParams;
@@ -85,6 +89,7 @@ export declare class NwcKit {
     makeInvoice(params: MakeInvoiceParams): Promise<MakeInvoiceResponse>;
     payInvoice(invoice: string): Promise<PayInvoiceResponse>;
     payInvoice(params: PayInvoiceParams): Promise<PayInvoiceResponse>;
+    paySubscriptionInvoice(params: PaySubscriptionInvoiceParams): Promise<PaySubscriptionInvoiceResponse>;
     makeTaprootAssetInvoice(params: MakeTaprootAssetInvoiceParams): Promise<MakeTaprootAssetInvoiceResponse>;
     payTaprootAssetInvoice(params: PayTaprootAssetInvoiceParams): Promise<PayTaprootAssetInvoiceResponse>;
     lookupInvoice(params: LookupInvoiceParams): Promise<InvoiceLookupResponse>;

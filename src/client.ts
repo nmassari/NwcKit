@@ -17,6 +17,7 @@ import type {
   NwcCapabilities,
   MakeInvoiceParams,
   PayInvoiceParams,
+  PaySubscriptionInvoiceParams,
   MakeTaprootAssetInvoiceParams,
   PayTaprootAssetInvoiceParams,
   LookupInvoiceParams,
@@ -33,6 +34,7 @@ import type {
   NwcAssetBalancesResponse,
   MakeInvoiceResponse,
   PayInvoiceResponse,
+  PaySubscriptionInvoiceResponse,
   MakeTaprootAssetInvoiceResponse,
   PayTaprootAssetInvoiceResponse,
   InvoiceLookupResponse,
@@ -68,6 +70,10 @@ type NwcMethodMap = {
   pay_invoice: {
     params: PayInvoiceParams;
     result: PayInvoiceResponse;
+  };
+  pay_subscription_invoice: {
+    params: PaySubscriptionInvoiceParams;
+    result: PaySubscriptionInvoiceResponse;
   };
   make_taproot_asset_invoice: {
     params: MakeTaprootAssetInvoiceParams;
@@ -281,6 +287,25 @@ export class NwcKit {
           ? msatsToSats(result.service_fee_paid)
           : result.service_fee_paid,
     };
+  }
+
+  async paySubscriptionInvoice(
+    params: PaySubscriptionInvoiceParams
+  ): Promise<PaySubscriptionInvoiceResponse> {
+    if (!params.subscription_id?.trim()) {
+      throw new Error("Subscription id is required");
+    }
+    if (!params.billing_period?.trim()) {
+      throw new Error("Billing period is required");
+    }
+    if (!params.invoice?.trim()) {
+      throw new Error("Invoice is required");
+    }
+    if (!params.merchant_event) {
+      throw new Error("Signed merchant event is required");
+    }
+
+    return this.request("pay_subscription_invoice", params);
   }
 
   async makeTaprootAssetInvoice(
@@ -673,6 +698,7 @@ function getCapabilitiesFromInfo(info: NwcWalletInfo): NwcCapabilities {
     canGetBalance: has("get_balance"),
     canMakeInvoice: has("make_invoice"),
     canPayInvoice: has("pay_invoice"),
+    canPaySubscriptionInvoice: has("pay_subscription_invoice"),
     canLookupInvoice: has("lookup_invoice"),
     canListTransactions: has("list_transactions"),
     canCreateSwap,

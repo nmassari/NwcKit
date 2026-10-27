@@ -32,6 +32,7 @@ export interface NwcCapabilities {
     canGetBalance: boolean;
     canMakeInvoice: boolean;
     canPayInvoice: boolean;
+    canPaySubscriptionInvoice: boolean;
     canLookupInvoice: boolean;
     canListTransactions: boolean;
     canCreateSwap: boolean;
@@ -53,6 +54,38 @@ export interface NwcAssetBalance {
 }
 export interface NwcAssetBalancesResponse {
     balances: NwcAssetBalance[];
+}
+export type NwcConnectionPurpose = "general_wallet" | "subscription_scheduler";
+export type SubscriptionPaymentAsset = "LNBTC" | "LNUSDT";
+export interface SignedMerchantNostrEvent {
+    id: string;
+    pubkey: string;
+    created_at: number;
+    kind: number;
+    tags: string[][];
+    content: string;
+    sig: string;
+}
+export interface PaySubscriptionInvoiceParams {
+    subscription_id: string;
+    billing_period: string;
+    asset: SubscriptionPaymentAsset;
+    invoice: string;
+    amount: string | number;
+    unit: "sat" | "USDT" | string;
+    request_code: string;
+    merchant_event: SignedMerchantNostrEvent;
+}
+export interface PaySubscriptionInvoiceResponse {
+    subscription_id: string;
+    billing_period: string;
+    asset: SubscriptionPaymentAsset | string;
+    amount: string;
+    unit: string;
+    payment_hash?: string;
+    preimage?: string;
+    fees_paid?: string | number;
+    paid_at?: number;
 }
 export interface MakeInvoiceParams {
     amount: number;
@@ -285,6 +318,10 @@ export interface NwcMethodMap {
         params: PayInvoiceParams;
         result: PayInvoiceResponse;
     };
+    pay_subscription_invoice: {
+        params: PaySubscriptionInvoiceParams;
+        result: PaySubscriptionInvoiceResponse;
+    };
     make_taproot_asset_invoice: {
         params: MakeTaprootAssetInvoiceParams;
         result: MakeTaprootAssetInvoiceResponse;
@@ -322,9 +359,9 @@ export type NwcMethod = keyof NwcMethodMap;
 export declare const ECS_APP_MESSAGE_PROTOCOL = "ecs-subscriptions";
 export declare const ECS_APP_MESSAGE_VERSION = "0.1";
 export declare const ECS_APP_MESSAGE_KIND = 31947;
-export type EcsAppMessageType = "payment.notification" | "subscription.offer" | "subscription.accepted" | "subscription.rejected" | "subscription.invoice_request" | "subscription.invoice_response" | "subscription.payment_sent" | "subscription.payment_failed" | "subscription.pause" | "subscription.resume" | "subscription.cancel" | "subscription.terms_update" | "subscription.ack";
+export type EcsAppMessageType = "payment.notification" | "subscription.offer" | "subscription.accepted" | "subscription.rejected" | "subscription.invoice_request" | "subscription.invoice_response" | "subscription.authorization_request" | "subscription.authorization_granted" | "subscription.revoke" | "subscription.revoked" | "subscription.payment_sent" | "subscription.payment_failed" | "subscription.pause" | "subscription.resume" | "subscription.cancel" | "subscription.terms_update" | "subscription.ack";
 export type SubscriptionInterval = "daily" | "weekly" | "monthly" | "yearly";
-export type SubscriptionStatus = "pending" | "active" | "paused" | "cancelled" | "expired";
+export type SubscriptionStatus = "pending" | "active" | "paused" | "cancelled" | "expired" | "revoked";
 export type SubscriptionPaymentPolicy = "manual_confirm" | "autopay";
 export interface EcsAppMessageEnvelope<TPayload = unknown> {
     protocol: typeof ECS_APP_MESSAGE_PROTOCOL;
@@ -369,6 +406,10 @@ export interface SubscriptionTerms {
     merchantName?: string;
     merchantDomain?: string;
     termsHash?: string;
+    asset?: SubscriptionPaymentAsset;
+    maxPeriodSpend?: string | number;
+    maxSinglePayment?: string | number;
+    unit?: "sat" | "USDT" | string;
 }
 export interface SubscriptionOfferPayload extends SubscriptionTerms {
     initialInvoice?: string;

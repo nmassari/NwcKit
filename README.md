@@ -281,6 +281,10 @@ MVP message types:
 * `subscription.accepted`
 * `subscription.invoice_request`
 * `subscription.invoice_response`
+* `subscription.authorization_request`
+* `subscription.authorization_granted`
+* `subscription.revoke`
+* `subscription.revoked`
 * `subscription.payment_sent`
 * `subscription.payment_failed`
 * `subscription.cancel`
@@ -334,9 +338,24 @@ const validation = validateSubscriptionInvoiceResponse({
 });
 
 if (validation.ok) {
-  await nwc.payInvoice(invoiceResponsePayload.invoice);
+  await nwc.paySubscriptionInvoice({
+    subscription_id: invoiceResponsePayload.subscriptionId,
+    billing_period: invoiceResponsePayload.billingPeriod,
+    asset: "LNBTC",
+    invoice: invoiceResponsePayload.invoice,
+    amount: invoiceResponsePayload.amountSats,
+    unit: "sat",
+    request_code: invoiceResponsePayload.requestCode,
+    merchant_event: signedMerchantEvent,
+  });
 }
 ```
+
+`pay_subscription_invoice` is intended only for a dedicated
+`subscription_scheduler` NWC connection. The wallet service remains
+authoritative for the granted merchant, asset, limits, billing period, expiry,
+revocation and replay protection. Fields supplied by the client never expand
+the server-side grant.
 
 ---
 

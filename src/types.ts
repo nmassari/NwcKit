@@ -37,6 +37,7 @@ export interface NwcCapabilities {
   canGetBalance: boolean;
   canMakeInvoice: boolean;
   canPayInvoice: boolean;
+  canPaySubscriptionInvoice: boolean;
   canLookupInvoice: boolean;
   canListTransactions: boolean;
   canCreateSwap: boolean;
@@ -61,6 +62,45 @@ export interface NwcAssetBalance {
 
 export interface NwcAssetBalancesResponse {
   balances: NwcAssetBalance[];
+}
+
+export type NwcConnectionPurpose =
+  | "general_wallet"
+  | "subscription_scheduler";
+
+export type SubscriptionPaymentAsset = "LNBTC" | "LNUSDT";
+
+export interface SignedMerchantNostrEvent {
+  id: string;
+  pubkey: string;
+  created_at: number;
+  kind: number;
+  tags: string[][];
+  content: string;
+  sig: string;
+}
+
+export interface PaySubscriptionInvoiceParams {
+  subscription_id: string;
+  billing_period: string;
+  asset: SubscriptionPaymentAsset;
+  invoice: string;
+  amount: string | number;
+  unit: "sat" | "USDT" | string;
+  request_code: string;
+  merchant_event: SignedMerchantNostrEvent;
+}
+
+export interface PaySubscriptionInvoiceResponse {
+  subscription_id: string;
+  billing_period: string;
+  asset: SubscriptionPaymentAsset | string;
+  amount: string;
+  unit: string;
+  payment_hash?: string;
+  preimage?: string;
+  fees_paid?: string | number;
+  paid_at?: number;
 }
 
 export interface MakeInvoiceParams {
@@ -324,6 +364,10 @@ export interface NwcMethodMap {
     params: PayInvoiceParams;
     result: PayInvoiceResponse;
   };
+  pay_subscription_invoice: {
+    params: PaySubscriptionInvoiceParams;
+    result: PaySubscriptionInvoiceResponse;
+  };
   make_taproot_asset_invoice: {
     params: MakeTaprootAssetInvoiceParams;
     result: MakeTaprootAssetInvoiceResponse;
@@ -371,6 +415,10 @@ export type EcsAppMessageType =
   | "subscription.rejected"
   | "subscription.invoice_request"
   | "subscription.invoice_response"
+  | "subscription.authorization_request"
+  | "subscription.authorization_granted"
+  | "subscription.revoke"
+  | "subscription.revoked"
   | "subscription.payment_sent"
   | "subscription.payment_failed"
   | "subscription.pause"
@@ -390,7 +438,8 @@ export type SubscriptionStatus =
   | "active"
   | "paused"
   | "cancelled"
-  | "expired";
+  | "expired"
+  | "revoked";
 
 export type SubscriptionPaymentPolicy = "manual_confirm" | "autopay";
 
@@ -441,6 +490,10 @@ export interface SubscriptionTerms {
   merchantName?: string;
   merchantDomain?: string;
   termsHash?: string;
+  asset?: SubscriptionPaymentAsset;
+  maxPeriodSpend?: string | number;
+  maxSinglePayment?: string | number;
+  unit?: "sat" | "USDT" | string;
 }
 
 export interface SubscriptionOfferPayload extends SubscriptionTerms {

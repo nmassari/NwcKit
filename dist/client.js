@@ -128,6 +128,21 @@ export class NwcKit {
                 : result.service_fee_paid,
         };
     }
+    async paySubscriptionInvoice(params) {
+        if (!params.subscription_id?.trim()) {
+            throw new Error("Subscription id is required");
+        }
+        if (!params.billing_period?.trim()) {
+            throw new Error("Billing period is required");
+        }
+        if (!params.invoice?.trim()) {
+            throw new Error("Invoice is required");
+        }
+        if (!params.merchant_event) {
+            throw new Error("Signed merchant event is required");
+        }
+        return this.request("pay_subscription_invoice", params);
+    }
     async makeTaprootAssetInvoice(params) {
         const amountValue = Number(params.amount);
         assertPositiveAmount(amountValue);
@@ -410,6 +425,7 @@ function getCapabilitiesFromInfo(info) {
         canGetBalance: has("get_balance"),
         canMakeInvoice: has("make_invoice"),
         canPayInvoice: has("pay_invoice"),
+        canPaySubscriptionInvoice: has("pay_subscription_invoice"),
         canLookupInvoice: has("lookup_invoice"),
         canListTransactions: has("list_transactions"),
         canCreateSwap,
