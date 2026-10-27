@@ -1,4 +1,4 @@
-import type { NwcKitOptions, NwcWalletInfo, NwcCapabilities, MakeInvoiceParams, PayInvoiceParams, PaySubscriptionInvoiceParams, MakeTaprootAssetInvoiceParams, PayTaprootAssetInvoiceParams, LookupInvoiceParams, ListTransactionsParams, CreateSwapParams, CreateSwapRequestParams, CreateSwapResponse, CreateOnchainToLightningSwapParams, CreateLightningToOnchainSwapParams, SwapStatusParams, NwcBalanceResponse, NwcAssetBalancesResponse, MakeInvoiceResponse, PayInvoiceResponse, PaySubscriptionInvoiceResponse, MakeTaprootAssetInvoiceResponse, PayTaprootAssetInvoiceResponse, InvoiceLookupResponse, ListTransactionsResponse, OnchainToLightningSwapResponse, LightningToOnchainSwapResponse, SwapOperationStatusResponse, RefreshSwapStatusResponse } from "./types.js";
+import type { NwcKitOptions, NwcWalletInfo, NwcCapabilities, MakeInvoiceParams, PayInvoiceParams, PaySubscriptionInvoiceParams, MakeTaprootAssetInvoiceParams, PayTaprootAssetInvoiceParams, LookupInvoiceParams, ListTransactionsParams, CreateSwapParams, CreateSwapRequestParams, CreateSwapResponse, CreateOnchainToLightningSwapParams, CreateLightningToOnchainSwapParams, SwapStatusParams, NwcBalanceResponse, NwcAssetBalancesResponse, MakeInvoiceResponse, PayInvoiceResponse, PaySubscriptionInvoiceResponse, RevokeSubscriptionParams, RevokeSubscriptionResponse, MakeTaprootAssetInvoiceResponse, PayTaprootAssetInvoiceResponse, InvoiceLookupResponse, ListTransactionsResponse, OnchainToLightningSwapResponse, LightningToOnchainSwapResponse, SwapOperationStatusResponse, RefreshSwapStatusResponse } from "./types.js";
 type NwcMethodMap = {
     get_info: {
         params: Record<string, never>;
@@ -23,6 +23,10 @@ type NwcMethodMap = {
     pay_subscription_invoice: {
         params: PaySubscriptionInvoiceParams;
         result: PaySubscriptionInvoiceResponse;
+    };
+    revoke_subscription: {
+        params: RevokeSubscriptionParams;
+        result: RevokeSubscriptionResponse;
     };
     make_taproot_asset_invoice: {
         params: MakeTaprootAssetInvoiceParams;
@@ -90,6 +94,7 @@ export declare class NwcKit {
     payInvoice(invoice: string): Promise<PayInvoiceResponse>;
     payInvoice(params: PayInvoiceParams): Promise<PayInvoiceResponse>;
     paySubscriptionInvoice(params: PaySubscriptionInvoiceParams): Promise<PaySubscriptionInvoiceResponse>;
+    revokeSubscription(params?: RevokeSubscriptionParams): Promise<RevokeSubscriptionResponse>;
     makeTaprootAssetInvoice(params: MakeTaprootAssetInvoiceParams): Promise<MakeTaprootAssetInvoiceResponse>;
     payTaprootAssetInvoice(params: PayTaprootAssetInvoiceParams): Promise<PayTaprootAssetInvoiceResponse>;
     lookupInvoice(params: LookupInvoiceParams): Promise<InvoiceLookupResponse>;

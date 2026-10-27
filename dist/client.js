@@ -143,6 +143,9 @@ export class NwcKit {
         }
         return this.request("pay_subscription_invoice", params);
     }
+    async revokeSubscription(params = {}) {
+        return this.request("revoke_subscription", params);
+    }
     async makeTaprootAssetInvoice(params) {
         const amountValue = Number(params.amount);
         assertPositiveAmount(amountValue);
@@ -426,6 +429,7 @@ function getCapabilitiesFromInfo(info) {
         canMakeInvoice: has("make_invoice"),
         canPayInvoice: has("pay_invoice"),
         canPaySubscriptionInvoice: has("pay_subscription_invoice"),
+        canRevokeSubscription: has("revoke_subscription"),
         canLookupInvoice: has("lookup_invoice"),
         canListTransactions: has("list_transactions"),
         canCreateSwap,

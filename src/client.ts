@@ -35,6 +35,8 @@ import type {
   MakeInvoiceResponse,
   PayInvoiceResponse,
   PaySubscriptionInvoiceResponse,
+  RevokeSubscriptionParams,
+  RevokeSubscriptionResponse,
   MakeTaprootAssetInvoiceResponse,
   PayTaprootAssetInvoiceResponse,
   InvoiceLookupResponse,
@@ -74,6 +76,10 @@ type NwcMethodMap = {
   pay_subscription_invoice: {
     params: PaySubscriptionInvoiceParams;
     result: PaySubscriptionInvoiceResponse;
+  };
+  revoke_subscription: {
+    params: RevokeSubscriptionParams;
+    result: RevokeSubscriptionResponse;
   };
   make_taproot_asset_invoice: {
     params: MakeTaprootAssetInvoiceParams;
@@ -306,6 +312,12 @@ export class NwcKit {
     }
 
     return this.request("pay_subscription_invoice", params);
+  }
+
+  async revokeSubscription(
+    params: RevokeSubscriptionParams = {}
+  ): Promise<RevokeSubscriptionResponse> {
+    return this.request("revoke_subscription", params);
   }
 
   async makeTaprootAssetInvoice(
@@ -699,6 +711,7 @@ function getCapabilitiesFromInfo(info: NwcWalletInfo): NwcCapabilities {
     canMakeInvoice: has("make_invoice"),
     canPayInvoice: has("pay_invoice"),
     canPaySubscriptionInvoice: has("pay_subscription_invoice"),
+    canRevokeSubscription: has("revoke_subscription"),
     canLookupInvoice: has("lookup_invoice"),
     canListTransactions: has("list_transactions"),
     canCreateSwap,

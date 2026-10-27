@@ -1,5 +1,5 @@
 import { type Event } from "nostr-tools";
-import { type EcsAppMessage, type EcsAppMessageOptions, type SendEcsAppMessageParams, type SubscriptionInvoiceValidationResult, type ValidateSubscriptionInvoiceResponseParams } from "./types.js";
+import { type EcsAppMessage, type EcsAppMessageOptions, type SendEcsAppMessageParams, type SubscriptionInvoiceResponsePayload, type SubscriptionInvoiceValidationResult, type ValidateSubscriptionInvoiceResponseParams } from "./types.js";
 type MessageHandler = (message: EcsAppMessage) => void | Promise<void>;
 type ErrorHandler = (error: unknown, event?: Event) => void | Promise<void>;
 export declare class NostrPaymentMessages {
@@ -25,4 +25,5 @@ export declare class NostrPaymentMessages {
 }
 export declare function generateInvoiceRequestCode(byteLength?: number): string;
 export declare function validateSubscriptionInvoiceResponse(params: ValidateSubscriptionInvoiceResponseParams): SubscriptionInvoiceValidationResult;
+export declare function createSubscriptionPaymentCommitment(payload: SubscriptionInvoiceResponsePayload): Promise<string>;
 export {};

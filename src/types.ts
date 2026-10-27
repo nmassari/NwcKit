@@ -38,6 +38,7 @@ export interface NwcCapabilities {
   canMakeInvoice: boolean;
   canPayInvoice: boolean;
   canPaySubscriptionInvoice: boolean;
+  canRevokeSubscription: boolean;
   canLookupInvoice: boolean;
   canListTransactions: boolean;
   canCreateSwap: boolean;
@@ -101,6 +102,15 @@ export interface PaySubscriptionInvoiceResponse {
   preimage?: string;
   fees_paid?: string | number;
   paid_at?: number;
+}
+
+export interface RevokeSubscriptionParams {
+  reason?: string;
+}
+
+export interface RevokeSubscriptionResponse {
+  revoked: boolean;
+  revoked_at: number;
 }
 
 export interface MakeInvoiceParams {
@@ -368,6 +378,10 @@ export interface NwcMethodMap {
     params: PaySubscriptionInvoiceParams;
     result: PaySubscriptionInvoiceResponse;
   };
+  revoke_subscription: {
+    params: RevokeSubscriptionParams;
+    result: RevokeSubscriptionResponse;
+  };
   make_taproot_asset_invoice: {
     params: MakeTaprootAssetInvoiceParams;
     result: MakeTaprootAssetInvoiceResponse;
@@ -523,7 +537,10 @@ export interface SubscriptionInvoiceRequestPayload {
   billingPeriod: string;
   sequence?: number;
   requestCode: string;
-  amountSatsExpected: number;
+  amountSatsExpected?: number;
+  asset?: SubscriptionPaymentAsset;
+  amountExpected?: string | number;
+  unit?: "sat" | "USDT" | string;
   createdAt: string;
   expiresAt: string;
   previousPaymentHash?: string;
@@ -537,7 +554,10 @@ export interface SubscriptionInvoiceResponsePayload {
   sequence?: number;
   requestCode: string;
   invoice: string;
-  amountSats: number;
+  amountSats?: number;
+  asset?: SubscriptionPaymentAsset;
+  amount?: string | number;
+  unit?: "sat" | "USDT" | string;
   description?: string;
   createdAt: string;
   expiresAt?: string;
@@ -588,7 +608,10 @@ export interface PendingSubscriptionInvoiceRequest {
   customerPubkey: string;
   billingPeriod: string;
   requestCode: string;
-  amountSatsExpected: number;
+  amountSatsExpected?: number;
+  asset?: SubscriptionPaymentAsset;
+  amountExpected?: string | number;
+  unit?: "sat" | "USDT" | string;
   expiresAt: string;
   sequence?: number;
   consumed?: boolean;

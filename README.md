@@ -351,6 +351,12 @@ if (validation.ok) {
 }
 ```
 
+For `subscription.invoice_response`, `NostrPaymentMessages` also adds a signed
+`payment_commitment` tag. It is a SHA-256 commitment over subscription id,
+billing period, asset, invoice, amount, unit and request code. The wallet
+provider verifies it before paying, so a compromised scheduler cannot replace
+any payment field even though the event content is encrypted for the scheduler.
+
 `pay_subscription_invoice` is intended only for a dedicated
 `subscription_scheduler` NWC connection. The wallet service remains
 authoritative for the granted merchant, asset, limits, billing period, expiry,

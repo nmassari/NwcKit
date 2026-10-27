@@ -118,7 +118,7 @@ export class NostrPaymentMessages {
         ["type", params.type],
         ["protocol", ECS_APP_MESSAGE_PROTOCOL],
         ["version", ECS_APP_MESSAGE_VERSION],
-        ...subscriptionTags(params.payload),
+        ...(await subscriptionTags(params.type, params.payload)),
         ...(params.tags ?? []),
       ],
       pubkey: this.publicKey,
@@ -231,8 +231,31 @@ export function validateSubscriptionInvoiceResponse(
     errors.push("Sequence does not match");
   }
 
-  if (response.amountSats > pendingRequest.amountSatsExpected) {
+  const responseAmount = normalizeSubscriptionAmount(
+    response.amount,
+    response.amountSats
+  );
+  const expectedAmount = normalizeSubscriptionAmount(
+    pendingRequest.amountExpected,
+    pendingRequest.amountSatsExpected
+  );
+
+  if (!responseAmount) {
+    errors.push("Invoice amount is required");
+  } else if (expectedAmount && Number(responseAmount) > Number(expectedAmount)) {
     errors.push("Invoice amount exceeds the expected amount");
+  }
+
+  if (
+    response.asset &&
+    pendingRequest.asset &&
+    response.asset !== pendingRequest.asset
+  ) {
+    errors.push("Invoice asset does not match");
+  }
+
+  if (response.unit && pendingRequest.unit && response.unit !== pendingRequest.unit) {
+    errors.push("Invoice unit does not match");
   }
 
   if (!response.invoice?.trim()) {
@@ -243,6 +266,40 @@ export function validateSubscriptionInvoiceResponse(
     ok: errors.length === 0,
     errors,
   };
+}
+
+export async function createSubscriptionPaymentCommitment(
+  payload: SubscriptionInvoiceResponsePayload
+): Promise<string> {
+  const amount = normalizeSubscriptionAmount(payload.amount, payload.amountSats);
+  if (!amount) {
+    throw new Error("Invoice amount is required for payment commitment");
+  }
+
+  const canonical = JSON.stringify({
+    protocol: "easycryptosend.subscription-payment",
+    version: 1,
+    subscription_id: payload.subscriptionId,
+    billing_period: payload.billingPeriod,
+    asset: payload.asset ?? "LNBTC",
+    invoice: payload.invoice,
+    amount,
+    unit: payload.unit ?? "sat",
+    request_code: payload.requestCode,
+  });
+
+  const cryptoApi = globalThis.crypto;
+  if (!cryptoApi?.subtle) {
+    throw new Error("Web Crypto SHA-256 is not available");
+  }
+
+  const digest = await cryptoApi.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(canonical)
+  );
+  return Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0")
+  ).join("");
 }
 
 function validateEnvelope(envelope: EcsAppMessageEnvelope): void {
@@ -259,7 +316,10 @@ function validateEnvelope(envelope: EcsAppMessageEnvelope): void {
   }
 }
 
-function subscriptionTags(payload: unknown): string[][] {
+async function subscriptionTags(
+  type: string,
+  payload: unknown
+): Promise<string[][]> {
   if (!payload || typeof payload !== "object") return [];
 
   const maybe = payload as {
@@ -276,7 +336,31 @@ function subscriptionTags(payload: unknown): string[][] {
     tags.push(["period", maybe.billingPeriod]);
   }
 
+  if (type === "subscription.invoice_response") {
+    tags.push([
+      "payment_commitment",
+      await createSubscriptionPaymentCommitment(
+        payload as SubscriptionInvoiceResponsePayload
+      ),
+    ]);
+  }
+
   return tags;
+}
+
+function normalizeSubscriptionAmount(
+  genericAmount: string | number | undefined,
+  legacySats: number | undefined
+): string | undefined {
+  const value = genericAmount ?? legacySats;
+  if (value === undefined || value === null || value === "") return undefined;
+
+  const normalized = String(value);
+  if (!/^\d+(?:\.\d+)?$/.test(normalized) || Number(normalized) <= 0) {
+    return undefined;
+  }
+
+  return normalized;
 }
 
 function getTagValue(tags: string[][], name: string): string | undefined {
