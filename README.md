@@ -274,6 +274,7 @@ the EasyCryptoSend application-message layer:
 
 * [NWC-XX Merchant-Bound Recurring Payments pre-proposal](docs/nwc-recurring-payments/XX.md)
 * [Compatibility review against NWC-08 and NWC-13](docs/nwc-recurring-payments/COMPATIBILITY.md)
+* [Draft issue for maintainer review](docs/nwc-recurring-payments/PROPOSAL_ISSUE.md)
 
 The app-message layer uses encrypted Nostr events with:
 

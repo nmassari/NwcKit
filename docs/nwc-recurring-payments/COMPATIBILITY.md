@@ -97,8 +97,8 @@ No change to the NWC-13 response schema is needed.
 | `PAYMENT_UNKNOWN` custom error | Simplify initially | Use core `INTERNAL` plus an explanatory message until a shared error is justified |
 | `REVOKED`, `EXPIRED`, `INVALID_REQUEST`, `UNSUPPORTED_ASSET` custom errors | Map to core errors | Prefer `UNAUTHORIZED`, `RESTRICTED` or `OTHER` as applicable |
 | `revoke_subscription` called by scheduler | Defer from v1 | Wallet-side connection revocation remains authoritative |
-| Provider info event advertises only `nip04` | Non-compliant with target profile | Add and prefer `nip44_v2`, retain NIP-04 only for compatibility |
-| Provider has no `get_budget` method | Optional gap | Implement NWC-13 if the scheduler needs allowance visibility |
+| Provider advertises `nip44_v2 nip04` and replies with the request's negotiated mode | Implemented | Completed in NwcProvider commit [`71fb5ff`](https://github.com/nmassari/NwcProvider.LNbits/commit/71fb5ff) with official NIP-44 vector, round-trip and tamper tests |
+| Provider implements `get_budget` | Implemented | Completed in commit [`71fb5ff`](https://github.com/nmassari/NwcProvider.LNbits/commit/71fb5ff); it returns the NWC-13 empty result until a true NWC-08 cumulative budget is configured |
 | Provider info event has no NWC extension identifier | Gap | Add `XX` after an identifier is assigned |
 
 ## Why ordinary `pay_invoice` plus a budget is insufficient
