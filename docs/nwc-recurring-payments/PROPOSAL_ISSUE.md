@@ -128,12 +128,16 @@ A working implementation of the security model exists, although its current
 experimental payload is not claimed to be conformant with the final proposal:
 
 - [NwcKit pre-proposal and compatibility review](https://github.com/nmassari/NwcKit/tree/main/docs/nwc-recurring-payments)
-- [NwcProvider NIP-44 v2 and NWC-13 implementation](https://github.com/nmassari/NwcProvider.LNbits/commit/71fb5ff)
+- [Public reference implementation notes](https://github.com/nmassari/NwcKit/blob/main/docs/nwc-recurring-payments/REFERENCE_IMPLEMENTATION.md)
 
 The provider validates signed merchant commitments, persists replay state,
 blocks duplicate billing periods, reconciles uncertain payment outcomes and
 supports NIP-44 v2 with NIP-04 fallback. The proposal draft narrows and
 generalizes that implementation for interoperability.
+
+The production provider repository is private. Its protocol and security
+behavior are documented publicly in the reference implementation notes above;
+source-level review can be arranged on request.
 
 ### Open questions
 
