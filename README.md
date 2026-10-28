@@ -269,6 +269,12 @@ await client.disconnect();
 
 ## Experimental subscription messages
 
+The standards-oriented recurring-payment work is documented separately from
+the EasyCryptoSend application-message layer:
+
+* [NWC-XX Merchant-Bound Recurring Payments pre-proposal](docs/nwc-recurring-payments/XX.md)
+* [Compatibility review against NWC-08 and NWC-13](docs/nwc-recurring-payments/COMPATIBILITY.md)
+
 The app-message layer uses encrypted Nostr events with:
 
 ```text
